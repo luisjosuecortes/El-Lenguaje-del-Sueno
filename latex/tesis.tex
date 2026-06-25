@@ -1,0 +1,99 @@
+\sloppy
+
+\documentclass[chico, unlado, openany]{recursos/tesis_fc}
+\usepackage{caption}
+\captionsetup{labelfont=bf, font=small}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.7}
+\usepackage{placeins}
+\usepackage[utf8]{inputenc}
+\usepackage{tabulary}
+\usepackage{adjustbox}
+\usepackage{rotating}
+\usepackage{color,colortbl}
+\usepackage[T1]{fontenc}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage[natbibapa]{apacite}
+\usepackage{morefloats}
+\usepackage{amssymb}
+\usepackage{booktabs} % Para tablas profesionales (\toprule, \midrule, \bottomrule)
+\usepackage{parskip} % Elimina sangría y añade espacio entre párrafos
+\captionsetup[mycapequ]{labelformat=empty}
+\DeclareCaptionType{mycapequ}[][List of equations]
+
+\graphicspath{{recursos/img/}}
+
+\hypersetup{hidelinks} % enlaces clicables sin los recuadros de color
+
+\begin{document}
+
+\titulo{El Lenguaje del Sueño: La Fase 2 como Hub Dinámico del Sueño Sano}
+\nombre{Luis Josué Cortés Anzurez}
+\carrera{LICENCIATURA EN INTELIGENCIA ARTIFICIAL}
+\area{}
+\director{Jose Daniel Arzate Mena}
+\codirector{Jorge Hermosillo Valadez}
+\fecha{Enero 2026}
+
+\resumen{
+\noindent Esta tesis modela la dinámica de las transiciones del sueño combinando Cadenas de Markov con técnicas de Procesamiento de Lenguaje Natural (Word2Vec y una red recurrente LSTM). Sobre una cohorte unificada de \textbf{127 sujetos sanos} (112\,809 épocas de tres bases polisomnográficas), se trata el hipnograma como una secuencia simbólica en la que las fases del sueño son ``palabras'' y los ciclos ``oraciones''. El análisis markoviano respalda que el sueño sano posee una estructura no aleatoria: alta inercia de estado, ausencia del atajo SWS$\rightarrow$REM y una degradación ordenada de la estabilidad a lo largo de la noche. Un criterio multi-objetivo ---que concilia la proximidad a la ley de Zipf, la calidad del ajuste y la cobertura de los bloques de Fase 2--- fija la escala de tokenización en $N=6$ épocas (3 minutos), a la que la distribución de n-gramas resulta compatible con la de un lenguaje natural. Sobre esa escala, los \textit{embeddings} de Word2Vec organizan el espacio de fases de forma coherente con la fisiología. Por último, una red LSTM asigna una probabilidad creciente al estado destino en los minutos previos a una transición real ---señal que se desvanece al permutar la secuencia---; una prueba de permutación respalda esta anticipación hacia el REM, mientras que hacia el sueño profundo resulta solo marginal. En conjunto, los resultados son consistentes con que la Fase 2 actúe como un \textit{hub} dinámico cuya salida no es indiferente a su destino, una lectura que se ofrece como hipótesis a contrastar más que como hecho cerrado.
+
+\vspace{10pt}
+\noindent \textbf{Palabras clave:} arquitectura del sueño, Fase 2, cadenas de Markov, Word2Vec, \textit{embeddings}, LSTM, ley de Zipf, biomarcadores digitales.
+
+\vspace{24pt}
+\begin{center}{\Large\bfseries Abstract}\end{center}
+\vspace{6pt}
+\noindent This thesis models the dynamics of sleep-stage transitions by combining Markov chains with Natural Language Processing techniques (Word2Vec and a recurrent LSTM network). On a unified cohort of \textbf{127 healthy subjects} (112,809 epochs from three polysomnographic databases), the hypnogram is treated as a symbolic sequence in which sleep stages are ``words'' and cycles are ``sentences''. The Markov analysis supports that healthy sleep has a non-random structure: high state inertia, absence of the SWS$\rightarrow$REM shortcut, and an orderly degradation of stability over the night. A multi-objective criterion ---balancing closeness to Zipf's law, goodness of fit, and coverage of Stage~2 blocks--- sets the tokenization scale at $N=6$ epochs (3 minutes), where the n-gram distribution is compatible with that of a natural language. At this scale, Word2Vec embeddings organize the phase space coherently with physiology. Finally, an LSTM assigns increasing probability to the destination state in the minutes preceding a real transition ---a signal that vanishes when the sequence is permuted---; a permutation test supports this anticipation toward REM, whereas toward slow-wave sleep it is only marginal. Taken together, the results are consistent with Stage~2 acting as a dynamic hub whose exit is not indifferent to its destination, a reading offered as a hypothesis to be tested rather than a settled fact.
+
+\vspace{10pt}
+\noindent \textbf{Keywords:} sleep architecture, Stage~2, Markov chains, Word2Vec, embeddings, LSTM, Zipf's law, digital biomarkers.
+}
+
+\frontmatter
+\maketitle
+
+\agradecimientos{
+Al mirar en retrospectiva mi paso por la universidad, me doy cuenta de que el verdadero aprendizaje trascendió por mucho los límites de un salón de clases. Aprendí profundamente de las interminables charlas con mis compañeros, de la experiencia y exigencia de mis maestros, del apoyo incondicional de mis amigos y de la paciencia y guía invaluable de mis asesores. A lo largo de este tiempo, absorbí una inmensa cantidad de conocimiento técnico y teórico; sin embargo, de entre todo lo vivido, hay una revelación que me marcó por completo.
+
+\vspace{0.5\baselineskip}
+
+Cuando uno comienza este camino, la universidad suele presentarse como un universo lleno de conceptos abstractos. Uno siempre piensa que el objetivo final es memorizar fórmulas complejas, dominar la teoría a la perfección o resolver problemas matemáticos en un entorno controlado. Pero la lección más grande que me llevo es que todo ese conocimiento es estéril si no somos capaces de sacarlo del aula.
+
+\vspace{0.5\baselineskip}
+
+Aprendí que el verdadero propósito de lo que estudiamos no es quedarse encerrado en un documento académico o en líneas de código que pocos entienden, sino cruzar esa enorme brecha para convertirse en una realidad tangible. El mayor desafío ---y la recompensa más grande de esta carrera--- es tomar toda esa complejidad abstracta y transformarla en algo accesible, en herramientas que funcionen allá afuera, en las manos de las personas. Esa capacidad de traducir la teoría en soluciones reales que impacten el entorno es, sin duda, el legado más importante que me deja esta etapa y la filosofía con la que cierro este ciclo.
+
+\vspace{0.5\baselineskip}
+
+Este trabajo es, en gran medida, el resultado del amor y el esfuerzo compartido. A mis padres: Mamá, Papá, gracias por ser mi soporte incondicional, por ser un ejemplo y por todo el sacrificio que hicieron para que yo pudiera llegar hasta aquí; este logro es tanto de ustedes como mío. A mis abuelos, gracias por su motivación y por creer en mí desde el primer día, apoyándome siempre. Y a mis tíos, agradezco el camino que marcaron; ver sus éxitos académicos fue la luz que me guió y me motivó a perseguir mis propias metas.
+
+\newpage
+
+Quiero extender mi profunda gratitud a mis asesores, en especial al Dr. Daniel Arzate Mena, y también al Dr. Jorge Hermosillo Valadez. Gracias por confiar en mi trabajo, por compartir su experiencia conmigo y por guiarme con paciencia en cada etapa de este proceso. Su respaldo y visión fueron pieza clave para materializar este trabajo, y las enseñanzas que me dejaron trascienden con mucho estas páginas: me llevo de ellos una manera más rigurosa, crítica y honesta de mirar los problemas, un aprendizaje que habrá de acompañarme mucho más allá de esta tesis.
+}
+\makeagradecimientos
+\cleardoublepage
+
+\makeresumen
+\cleardoublepage
+
+\tableofcontents
+\listoffigures
+
+\mainmatter
+
+\include{intro}
+\include{marcoteo}
+\include{metodologia}
+\include{resultados}
+\include{conclusiones}
+
+\bibliographystyle{recursos/apa_esp}
+\bibliography{recursos/bibliografia_fc}
+
+\end{document}

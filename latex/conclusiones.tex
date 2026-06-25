@@ -1,0 +1,141 @@
+\chapter{Discusión y Conclusiones}
+\chaptermark{Conclusiones}
+\label{conclusiones}
+
+La presente investigación partió de una hipótesis de trabajo: si el sueño posee una estructura secuencial no aleatoria, entonces las técnicas de Procesamiento de Lenguaje Natural (NLP) deberían ser capaces de captar parte de su ``sintaxis''. Los resultados obtenidos son consistentes con esta hipótesis y ofrecen una perspectiva complementaria sobre la función dinámica de la Fase 2 (S2), matizando su concepción tradicional como un estado de transición pasiva.
+
+\section{Discusión de Hallazgos}
+
+\subsection{La Fase 2 como Hub Dinámico}
+
+Tradicionalmente, la estadificación visual (Rechtschaffen \& Kales) trata a la Fase 2 como un estado homogéneo, un ``relleno'' entre los estados fisiológicamente interesantes (SWS y REM). Sin embargo, nuestros hallazgos topológicos (Sección 4.3) y estocásticos (Sección 4.1) son consistentes con que S2 actúa como un \textbf{nodo central (hub) de la arquitectura del sueño}.
+
+La evidencia es convergente desde múltiples perspectivas:
+\begin{enumerate}
+    \item \textbf{Evidencia Markoviana:} El análisis de transiciones confirmó que S2 es la ``puerta de entrada'' obligatoria al sueño profundo ($P(\text{SWS} \to \text{S2}) = 0.896$), y el único estado con acceso directo tanto a SWS como a REM.
+    
+    \item \textbf{Evidencia Topológica:} En el espacio latente, S2 es el único estado de sueño consolidado con similitud coseno positiva hacia el SWS ($+$0.302), manteniendo a la vez una dirección diferenciada respecto al REM ($-$0.248) y opuesta a la vigilia ($-$0.719). Sin S2, el sistema NREM perdería su nexo de continuidad.
+    
+    \item \textbf{Evidencia Dinámica:} Las trayectorias geométricas hacia REM y hacia SWS son distinguibles, y el modelo recurrente asigna probabilidad creciente al destino antes de la transición, lo que sugiere que la salida de S2 no es indiferente a su destino.
+\end{enumerate}
+
+Una interpretación posible ---que va más allá de lo estrictamente medido--- es que la Fase 2 funcione como un estado de \textit{negociación homeostática}, en el que el sistema ``decide'' si profundizar (ir a SWS) o activarse (ir a REM/Vigilia). Conviene subrayar que esta lectura es una hipótesis fisiológica sugerida por los datos sobre etiquetas, no una observación directa sobre el cerebro.
+
+\subsection{La Gramática del Sueño: una Escala Justificada}
+
+Un aporte metodológico crucial fue la determinación de la escala temporal de análisis. En lugar de descansar en un único criterio, la elección de $N=6$ (3 minutos) emergió de un \textbf{criterio multi-objetivo} que pondera tres medidas independientes evaluadas sobre toda la cohorte:
+
+\begin{itemize}
+    \item El \textbf{ajuste a la ley de Zipf} (proximidad del exponente al valor de referencia $\beta=1$).
+    \item La \textbf{calidad de ese ajuste} ($R^2 = 0.977$ en $N=6$, el mejor del barrido).
+    \item La \textbf{cobertura} de los bloques continuos de Fase 2 (47.33\% del tiempo en S2 con ventana de 6 épocas).
+\end{itemize}
+
+Ninguna métrica por sí sola es concluyente: el exponente $\beta$ más cercano a 1 se alcanza en $N=10$, pero a costa de degradar el ajuste y la cobertura. El valor $N=6$ es el que mejor concilia los tres objetivos. Intentar analizar el sueño con épocas aisladas de 30 segundos (como se hace en la práctica clínica estándar) es análogo a intentar entender un libro leyendo letras sueltas: se captura el símbolo, pero se pierde el significado del contexto.
+
+Así, la escala $N=6$ no fue elegida arbitrariamente, sino seleccionada mediante un procedimiento reproducible y multi-criterio.
+
+\subsection{El Modelo Anticipa la Siguiente Etiqueta}
+
+Uno de los hallazgos más sugerentes de esta tesis es la \textbf{bifurcación de trayectorias} (Sección 4.4) y, sobre todo, su confirmación con el modelo recurrente: el modelo asigna una probabilidad creciente al estado destino en los pasos previos a la transición, es decir, anticipa la siguiente \textit{etiqueta} del hipnograma antes de que el cambio sea clínicamente visible. Importa precisar que esta anticipación se mide sobre la secuencia de etiquetas (épocas de 30 s), no sobre la señal EEG cruda.
+
+La geometría del deslizador muestra además una asimetría descriptiva entre ambas transiciones:
+
+\begin{itemize}
+    \item \textbf{Mayor conservación global de la huella de origen en REM:} La similitud acumulada con el estado de partida es mayor en la trayectoria a REM (AUC = 2.574) que en la trayectoria a SWS (AUC = 1.946), lo que sugiere que el viraje a REM conserva más rasgos del contexto previo de S2 a lo largo de la ventana.
+\end{itemize}
+
+Conviene subrayar que esta asimetría procede de la \textit{misma} geometría del deslizador que \textbf{no alcanzó significancia estadística} (Sección \ref{sec:deslizador_stride}): se reporta, por tanto, como una observación \textbf{ilustrativa} y no como un hallazgo establecido.
+
+Es notable que el modelo Word2Vec, \textbf{sin recibir ninguna instrucción explícita sobre fisiología}, aprendió automáticamente que:
+\begin{itemize}
+    \item REM es ortogonal a NREM (similitud negativa).
+    \item S2 y SWS son variantes del mismo macro-estado.
+    \item La Vigilia y S1 forman un cluster de fragmentación, separado del sueño consolidado.
+\end{itemize}
+
+Que estas relaciones surjan \textbf{sin supervisión fisiológica explícita} sugiere que la estructura del sueño está codificada en la secuencia temporal con suficiente fuerza como para que un algoritmo sensible al contexto la recupere. En otras palabras, el modelo reconstruye, a partir de la pura secuencialidad, parte de las regularidades que las reglas de Rechtschaffen \& Kales codifican explícitamente. Esto es consistente con la idea de que dichas regularidades no son un mero artefacto de las reglas de estadificación, sino que reflejan la organización del proceso fisiológico subyacente.
+
+\subsection{¿Por Qué Anticiparía el Cerebro? Una Hipótesis Especulativa}
+
+\textit{Nota: esta subsección es deliberadamente especulativa. Lo que los datos respaldan es que el modelo anticipa la siguiente etiqueta; la interpretación fisiológica que sigue es una hipótesis a contrastar, no un hallazgo de este trabajo.}
+
+La existencia de una señal anticipatoria del orden de minutos plantea una pregunta natural: \textit{si esta antelación tuviera correlato fisiológico, ¿por qué se prepararía el sistema con tanta antelación?}
+
+Una posibilidad es que tal anticipación cumpliera una función de \textbf{eficiencia y estabilidad}. Las transiciones de fase en sistemas complejos son metabólicamente costosas y potencialmente inestables. ``Pre-calentar'' gradualmente los circuitos neurales de REM (o ``enfriar'' hacia SWS) durante un par de minutos podría:
+
+\begin{enumerate}
+    \item \textbf{Reducir el costo metabólico:} Evitando cambios abruptos de configuración neural.
+    \item \textbf{Proteger la estabilidad:} Permitiendo al sistema ``probar'' la viabilidad de la transición antes de comprometerla.
+    \item \textbf{Coordinar subsistemas:} Dando tiempo a que múltiples regiones cerebrales sincronicen su preparación.
+\end{enumerate}
+
+Esta interpretación conectaría con marcos teóricos como el \textit{Predictive Coding} y el \textit{Free Energy Principle} de Friston, según los cuales el cerebro minimiza la ``sorpresa'' anticipando los estados futuros. Nuestros resultados son compatibles con que una dinámica anticipatoria de este tipo opere durante el sueño, pero no la prueban; establecerlo requeriría trabajar sobre la señal fisiológica y no solo sobre las etiquetas.
+
+\subsection{Del Embedding Estático al Modelo Recurrente}
+
+Para llevar la representación vectorial a un modelo predictivo explícito, se entrenó una red recurrente LSTM como modelo de lenguaje del sueño, que lee la secuencia de 6-gramas y predice la fase siguiente paso a paso. La evaluación se hizo con honestidad metodológica: en exactitud global, las líneas base triviales (Markov de orden 1 y persistencia) alcanzan 0.880 frente a 0.744 del LSTM, pero lo hacen prediciendo siempre ``no cambies'', por lo que su exactitud sobre las transiciones reales es exactamente 0.0. El LSTM es el único modelo con desempeño positivo en ese régimen difícil (exactitud en transiciones = 0.288). Más relevante aún, al desplegar el modelo sobre los pasos previos a una bifurcación, la probabilidad asignada a REM y SWS crece de forma sostenida en los datos reales ($+$0.086 hacia REM, $+$0.069 hacia SWS) y permanece esencialmente plana en los datos permutados. Una \textbf{prueba de permutación con 50 redes barajadas} (cada una con reentrenamiento independiente) confirma que la anticipación hacia \textbf{REM es estadísticamente significativa} ($p=0.02$: ninguna de las 50 redes barajadas reproduce la pendiente real), mientras que hacia \textbf{SWS} resulta solo \textbf{marginal} ($p=0.10$) por la contaminación del artefacto de composición de ventana. La anticipación reside, por tanto, en el orden temporal y no en la frecuencia marginal de las fases.
+
+\section{Implicaciones del Estudio}
+
+\subsection{Implicaciones Teóricas}
+
+\begin{enumerate}
+    \item \textbf{Revalorización de la Fase 2:} El modelo tradicional de R\&K (1968) está diseñado para clasificar, no para describir dinámica. Nuestro enfoque sugiere que S2 se comporta menos como un estado de relleno homogéneo y más como un ``controlador de tráfico'' del sueño.
+
+    \item \textbf{El Sueño como Lenguaje:} La distribución de n-gramas es \textbf{compatible} con la estructura informativa de un lenguaje natural (ley de Zipf). Esto motiva explorar el arsenal de NLP (Transformers, modelos de atención) en el estudio del sueño.
+
+    \item \textbf{Embeddings como Biomarcadores:} Mostramos que es posible entrenar modelos no supervisados que capturen parte de las regularidades fisiológicas a partir de la estructura secuencial, sin reglas expertas explícitas. Esto resulta prometedor para el descubrimiento de biomarcadores digitales.
+\end{enumerate}
+
+\subsection{Implicaciones Clínicas y Tecnológicas}
+
+Si la \textbf{ventana de anticipación de unos minutos} observada sobre las etiquetas se confirmara y se replicara sobre la señal cruda, podría complementar a los métodos clásicos, que solo detectan el REM cuando ya ha comenzado (atonía muscular y movimientos oculares). Las siguientes aplicaciones son, por tanto, \textbf{prospectivas y especulativas}, no resultados de esta tesis; esbozan la dirección que podría tomar una línea de \textbf{Neuroestimulación de Lazo Cerrado (Closed-Loop)}:
+
+\begin{itemize}
+    \item \textbf{Potenciación de memoria:} Estimular justo antes de la transición a REM para optimizar la consolidación.
+    \item \textbf{Diagnóstico de narcolepsia:} Detectar transiciones anómalas a REM desde vigilia (SOREMP) mediante el análisis de trayectorias vectoriales.
+\end{itemize}
+
+\section{Limitaciones}
+
+Es necesario reconocer las limitaciones del presente estudio para contextualizar sus alcances:
+
+\begin{enumerate}
+    \item \textbf{Construcción sobre Sueño Sano:} El núcleo del modelo se construyó exclusivamente sobre sujetos sanos, que definen la referencia normativa. No se modeló la dinámica dentro de patologías específicas, por lo que la dinámica anticipatoria fina en trastornos como la narcolepsia o el insomnio queda por caracterizar.
+    
+    \item \textbf{Resolución Temporal:} Trabajamos sobre etiquetas discretas cada 30 segundos (épocas estándar). Aunque superamos esta limitación mediante n-gramas ($N=6$), el uso directo de la señal EEG cruda (sin etiquetado previo) podría ofrecer una granularidad temporal aún mayor.
+    
+    \item \textbf{Interpretabilidad de Dimensiones:} Aunque UMAP nos permite visualizar el espacio latente, las 32 dimensiones del embedding de 6-gramas siguen siendo una ``caja negra''. No podemos señalar qué dimensión específica codifica los grafoelementos propios de la Fase 2 ---los husos de sueño y los complejos K--- frente a las ondas delta del sueño profundo.
+    
+    \item \textbf{Causalidad vs. Correlación:} Demostramos que el vector contiene información predictiva, pero no podemos afirmar que el cambio vectorial \textit{cause} la transición. El vector podría estar capturando correlatos, no mecanismos.
+\end{enumerate}
+
+\section{Trabajo Futuro}
+
+A partir de los hallazgos y limitaciones identificados, se proponen las siguientes líneas de investigación, ordenadas de mayor a menor calado científico:
+
+\begin{itemize}
+    \item \textbf{Contraste con cohortes patológicas (línea principal).} Es la extensión que convierte este trabajo descriptivo en un programa de investigación \textbf{que puede ponerse a prueba}: una hipótesis que los datos podrían confirmar o refutar. La hipótesis es concreta: si la Fase 2 pierde su heterogeneidad funcional en una patología, las métricas derivadas del modelo ---la \textbf{perplejidad} de la LSTM y la \textbf{pendiente anticipatoria} agregadas por paciente--- deberían \textit{desviarse de la norma} establecida sobre el sueño sano. Esto aporta un mecanismo (la degradación de la dinámica de salida de S2) y una métrica medible, no una mera comparación. El caso más nítido es la \textbf{Narcolepsia Tipo 1}, con su intrusión anómala de REM, y el contraste debería hacerse sobre cohortes multicéntricas de tamaño suficiente para separar la señal de enfermedad de la de procedencia. Trabajos recientes de modelos de lenguaje del hipnograma ya exploran esta dirección diagnóstica \citep{yu2024sleepgpt}, lo que refuerza la pertinencia ---y la viabilidad--- de esta línea.
+
+    \item \textbf{Validación sobre la señal EEG cruda.} Más que una mejora de granularidad temporal, esta línea es la \textbf{prueba de que la anticipación es genuina y no un artefacto de la estadificación}. Todo el análisis se apoya en etiquetas de 30\,s que ya son una discretización humana (reglas de R\&K), por lo que un revisor podría objetar que la señal anticipatoria refleje el \textit{modo en que los expertos asignan las épocas cerca de las transiciones} y no una dinámica fisiológica subyacente. Entrenar el modelo directamente sobre segmentos de EEG ---sin estadificación previa--- es lo único que cierra esa puerta: si la pendiente anticipatoria persiste sobre la señal cruda, el hallazgo queda libre del sesgo del observador. Por eso es una prueba de validez, no solo un refinamiento.
+
+    \item \textbf{Modelos generativos de secuencias de sueño.} El salto del embedding estático al modelo recurrente invita a continuar con arquitecturas de atención, pero este terreno \textbf{ya no es virgen}: modelos generativos del hipnograma tipo \textit{SleepGPT}/\textit{HypnoGPT} \citep{yu2024sleepgpt} y transformadores de estadificación \citep{phan2022sleeptransformer} ya tratan la secuencia de fases como un lenguaje. La aportación específica no sería ``inaugurar'' un \textit{Sleep-GPT}, sino \textbf{extender ese enfoque generativo a la tarea anticipatoria sobre \textit{embeddings} de \textit{n}-gramas}, evaluando si la \textit{Self-Attention} captura dependencias de rango largo (ciclos de $\sim$90 min) que la ventana fija de 3 minutos no alcanza.
+
+    \item \textbf{Implementación en tiempo real.} Como ingeniería derivada de lo anterior, un prototipo ligero ejecutable en dispositivos vestibles (\textit{wearables}) que calcule la trayectoria vectorial paso a paso y prediga la fase siguiente en vivo, habilitando las aplicaciones de lazo cerrado discutidas más arriba.
+\end{itemize}
+
+\clearpage
+\section{Conclusiones Finales}
+
+Esta tesis modeló la dinámica de las transiciones del sueño mediante un enfoque híbrido estocástico-vectorial. Se cumplieron los objetivos planteados, con apoyo para las tres hipótesis de investigación ---sólido para H1 y H2, y parcial para H3:
+
+\begin{enumerate}
+    \item \textbf{H1 (Estructural):} El sueño sano no es un proceso aleatorio, sino que posee una estructura no fragmentada. El análisis de Cadenas de Markov lo respalda: las fases muestran alta inercia, las transiciones respetan la topología fisiológica (no existe el atajo SWS$\rightarrow$REM) y la estabilidad se degrada de forma ordenada a lo largo de la noche.
+
+    \item \textbf{H2 (Lingüística):} Los hipnogramas pueden tratarse como secuencias simbólicas con propiedades análogas a las de un lenguaje. A una escala de \textbf{3 minutos ($N=6$)} ---seleccionada mediante un criterio multi-objetivo que concilia la proximidad a la ley de Zipf, la calidad del ajuste ($R^2 = 0.977$) y la cobertura de los bloques de Fase 2--- la distribución de n-gramas es compatible con la organización estadística de un idioma.
+
+    \item \textbf{H3 (Dinámica):} La salida de la Fase 2 no es indiferente a su destino. El modelo recurrente aprende a anticipar el siguiente estado: en los minutos previos a una transición real eleva de forma sostenida la probabilidad que asigna al destino, y esa anticipación se desvanece en cuanto se rompe el orden temporal de la secuencia, lo que confirma que reside en la estructura del relato y no en la frecuencia de las fases. La señal es \textbf{sólida hacia el REM} y más tentativa hacia el sueño profundo, y su tamaño de efecto es modesto; se trata, por tanto, de un apoyo \textbf{parcial pero direccionalmente nítido} a la hipótesis. Su lectura de fondo ---que la Fase 2 no se limita a esperar la transición, sino que parece preparar su salida--- queda planteada con la prudencia que merece, y su consolidación definitiva pasa por replicarla sobre la señal EEG cruda.
+\end{enumerate}
+
+En conclusión, los resultados son consistentes con la idea de que \textbf{el sueño posee una estructura secuencial legible con herramientas de lenguaje}. Las secuencias de fases no se comportan como ruido estocástico, sino que exhiben regularidades que un modelo sensible al contexto puede aprender y, en cierta medida, anticipar. Confirmar la robustez de esta señal anticipatoria y trasladarla a la señal cruda son los pasos naturales para convertir estas observaciones en una herramienta útil para la neurociencia del sueño.

@@ -1,0 +1,561 @@
+\chapter{Resultados}
+\chaptermark{Resultados}
+\label{resultados}
+
+En este capítulo se presentan los hallazgos cuantitativos derivados del modelado híbrido de la arquitectura del sueño. Los resultados se organizan siguiendo la lógica de descubrimiento: primero el análisis estocástico basal (validación de la estructura del sueño mediante Cadenas de Markov), luego la búsqueda de la escala temporal óptima (donde convergen la estadística y la fisiología), seguido de la dinámica de transiciones vectoriales y su validación con datos subrogados, y finalmente el modelado predictivo mediante una red recurrente LSTM, que pone a prueba la anticipación de las transiciones sobre datos reales.
+
+\section{Análisis Estocástico Basal: Cadenas de Markov}
+
+Antes de aplicar modelos complejos de representación vectorial, es necesario validar que los datos poseen la estructura markoviana esperada para un sueño fisiológico sano. Este análisis cumple dos objetivos: (1) confirmar la calidad del dataset y (2) establecer una línea base cuantitativa contra la cual medir los aportes de los modelos posteriores.
+
+\subsection{Matriz de Transición Global}
+
+Se calculó la \textbf{Matriz de Transición de Markov} a partir de todos los bigramas (pares de épocas consecutivas) extraídos de los 127 sujetos del dataset unificado (112 809 épocas). El análisis se restringe a las cinco fases fisiológicas (las épocas sin clasificar se excluyen). La Figura \ref{fig:matriz_global} presenta el resultado en sus dos normalizaciones: la global (cada celda es la fracción del total de transiciones) y la de por renglón (cada celda es $P(j|i)$, la probabilidad de ir a la fase $j$ dado que se está en $i$).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{matriz_transicion_unificada.png}
+    \caption{Matriz de Transición Unificada (bigramas, 127 sujetos). Izquierda: normalización global. Derecha: normalización por renglón ($P(j|i)$). La diagonal principal de la matriz por renglón exhibe valores elevados (0.65--0.95), indicando alta estabilidad intra-fase. Las celdas fuera de la diagonal revelan las rutas de transición preferentes.}
+    \label{fig:matriz_global}
+\end{figure}
+
+\subsubsection{Hallazgo Principal: Alta Inercia de Estado}
+
+El resultado más evidente es la \textbf{dominancia diagonal}: una vez que el cerebro entra en una fase, tiende a permanecer en ella. Los valores de la diagonal principal de la matriz por renglón cuantifican esta \textit{inercia}:
+
+\begin{table}[htbp]
+\centering
+\caption{Probabilidad de permanencia (diagonal) por fase del sueño.}
+\label{tab:diagonal_global}
+\begin{tabular}{lcc}
+\hline
+\textbf{Fase} & \textbf{$P(i|i)$} & \textbf{Interpretación} \\
+\hline
+Vigilia (W) & 0.811 & Alta, pero menor que sueño \\
+S1 & 0.655 & Inestable (fase de transición) \\
+S2 & 0.918 & Alta estabilidad \\
+SWS & 0.874 & Alta estabilidad \\
+REM & 0.955 & Máxima estabilidad \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Interpretación fisiológica:} La fase S1 muestra la menor estabilidad (65.5\%), confirmando su rol como estado transitorio entre la vigilia y el sueño consolidado. En contraste, el REM exhibe la máxima inercia (95.5\%), lo cual es consistente con la necesidad biológica de mantener este estado para completar los procesos de consolidación de memoria.
+
+\subsection{Análisis de Transiciones: La Matriz Sin Diagonal}
+
+Para revelar \textit{hacia dónde se dirige} el cerebro cuando decide abandonar una fase, se construyó una versión renormalizada de la matriz donde la diagonal principal es cero. Esto permite analizar las rutas de escape sin que la alta probabilidad de permanencia ``eclipse'' la información.
+
+\subsubsection{Rutas de Escape desde la Fase 2 (S2)}
+
+Al examinar la fila de S2 en la matriz sin diagonal (renormalizada sobre las salidas):
+\begin{itemize}
+    \item \textbf{50.1\%} transita hacia SWS (Sueño Profundo).
+    \item \textbf{19.7\%} transita hacia S1.
+    \item \textbf{15.5\%} transita hacia REM.
+    \item \textbf{14.7\%} transita hacia Vigilia.
+\end{itemize}
+
+\textbf{Conclusión:} La función primaria de la Fase 2 es servir como \textit{puerta de entrada al sueño profundo}. La transición a REM, aunque menos frecuente, representa la ruta alternativa hacia la activación paradójica.
+
+\subsubsection{El Sueño Profundo como ``Callejón Sin Salida''}
+
+Un hallazgo notable emerge de la fila de SWS:
+\begin{itemize}
+    \item \textbf{89.6\%} de las salidas regresan a S2.
+    \item \textbf{0.5\%} transitan directamente a REM (prácticamente nulo).
+\end{itemize}
+
+\textbf{Interpretación:} El sueño profundo (SWS) es un ``callejón fisiológico sin salida''. Para abandonarlo, el cerebro debe primero aligerarse hacia S2, respetando la jerarquía de estados. \textit{No existe un atajo SWS $\rightarrow$ REM}; esta restricción topológica valida que los datos corresponden a sueño fisiológico estructurado.
+
+\subsubsection{Inestabilidad Post-REM}
+
+La fila de REM en la matriz sin diagonal revela:
+\begin{itemize}
+    \item \textbf{34.7\%} regresa a S1.
+    \item \textbf{34.5\%} regresa a S2.
+    \item \textbf{30.5\%} transita a Vigilia (despertares breves).
+\end{itemize}
+
+\textbf{Interpretación:} Aunque el REM es extremadamente estable mientras dura (95.5\% de permanencia), cuando termina, suele hacerlo de manera abrupta, frecuentemente con un breve despertar o un aligeramiento hacia S1, antes de retomar el ciclo descendiendo hacia S2.
+
+\subsection{Evolución de la Estabilidad por Ciclos}
+
+El sueño no es un proceso estacionario; la presión homeostática modula progresivamente la robustez de las fases a lo largo de la noche. Para cuantificar este fenómeno, se calcularon matrices de transición independientes para cada ciclo ultradiano (aproximadamente 90 minutos) sobre el dataset unificado de 127 pacientes. El análisis se concentra en los ciclos 1 a 4, cuya cobertura es del 100\% (ciclo 1) y se mantiene por encima del 87.4\% (ciclo 4); en ciclos más tardíos la muestra se reduce.
+
+La Figura \ref{fig:estabilidad_ciclos} muestra la evolución de la diagonal principal ($P(i|i)$) a través de los ciclos.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1.0\textwidth]{evolucion_diagonal.png}
+    \caption{Evolución de la Estabilidad (Diagonal) por Ciclo, dataset unificado (127 pacientes). El SWS muestra una caída progresiva desde 0.907 (Ciclo 1) hasta 0.807 (Ciclo 4), reflejando la disipación de la presión homeostática, mientras que S2 asciende de forma sostenida.}
+    \label{fig:estabilidad_ciclos}
+\end{figure}
+
+\subsubsection{Degradación del Sueño Profundo (SWS)}
+
+El hallazgo más notable es la \textbf{caída de estabilidad del SWS}:
+\begin{itemize}
+    \item Ciclo 1: $P(\text{SWS}|\text{SWS}) = 0.907$ (máxima consolidación).
+    \item Ciclo 3: $P(\text{SWS}|\text{SWS}) = 0.834$ (fragmentación emergente).
+    \item Ciclo 4: $P(\text{SWS}|\text{SWS}) = 0.807$ (degradación).
+\end{itemize}
+
+Esta curva descendente es una manifestación directa del \textbf{Modelo de Borbély} \cite{borbely1982two}: la presión de sueño (Proceso S) se disipa con cada ciclo de sueño profundo, resultando en episodios de SWS cada vez más breves y frágiles.
+
+\subsubsection{Estabilización de S2}
+
+En contraste con el SWS, la Fase 2 muestra una \textbf{tendencia ascendente}:
+\begin{itemize}
+    \item Ciclo 1: $P(\text{S2}|\text{S2}) = 0.886$.
+    \item Ciclo 4: $P(\text{S2}|\text{S2}) = 0.941$.
+    \item Ciclo 5: $P(\text{S2}|\text{S2}) = 0.951$.
+\end{itemize}
+
+\textbf{Interpretación:} Conforme el SWS pierde presencia en los ciclos tardíos, S2 se convierte en el ``estado por defecto'' del sueño NREM, ocupando mayor porcentaje del tiempo y mostrando mayor resistencia al cambio.
+
+\subsection{Evolución de las Transiciones desde S2}
+
+Para complementar el análisis de estabilidad, se examinó cómo cambian las \textit{rutas de escape} desde S2 a lo largo de la noche. La Figura \ref{fig:trans_s2_condiag} muestra esta evolución y la Figura \ref{fig:trans_s2_sindiag} la contrasta por dataset.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1.0\textwidth]{evolucion_s2_destinos.png}
+    \caption{Evolución de los destinos de S2 a lo largo de los ciclos (dataset unificado, ciclos 1--5). La probabilidad $P(\text{S2} \rightarrow \text{SWS})$ cae drásticamente del Ciclo 1 al 5, mientras que $P(\text{S2} \rightarrow \text{REM})$ permanece relativamente constante.}
+    \label{fig:trans_s2_condiag}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1.0\textwidth]{comparativo_sws_rem_por_dataset.png}
+    \caption{Persistencia de SWS y REM por ciclo, desagregada por dataset (CAP, EDF, SCO). La tendencia descendente del SWS y la mayor estabilidad del REM son consistentes entre las tres fuentes, validando que el patrón no depende de un dataset particular.}
+    \label{fig:trans_s2_sindiag}
+\end{figure}
+
+\textbf{Hallazgo clave:} La probabilidad de transitar de S2 a SWS cae de 0.0746 (Ciclo 1) a 0.0149 (Ciclo 5), una reducción del 80\%. En el mismo intervalo, la transición $\text{S2} \rightarrow \text{REM}$ se mantiene prácticamente constante (de 0.0158 a 0.0099). Este resultado cuantifica matemáticamente la ``escasez de sueño profundo'' en las últimas horas de la noche.
+
+\subsection{Conclusión del Análisis Markoviano}
+
+El análisis de Cadenas de Markov respalda la \textbf{Hipótesis H1 (Estructural)}: el sueño sano no es un proceso aleatorio, sino que posee una estructura no fragmentada. En concreto:
+\begin{enumerate}
+    \item \textbf{El sueño es estable y estructurado:} Las fases exhiben alta inercia y las transiciones respetan la topología fisiológica (no hay atajos SWS $\rightarrow$ REM).
+    \item \textbf{El sueño se degrada con la noche:} La estabilidad del SWS decae exponencialmente, mientras que S2 se consolida como estado dominante.
+    \item \textbf{S2 es un distribuidor central:} Actúa como nodo de paso obligado entre el sueño ligero, el sueño profundo y el REM.
+\end{enumerate}
+
+Sin embargo, este análisis markoviano tiene una \textbf{limitación fundamental}: asume que las probabilidades de transición son constantes dentro de cada fase. La pregunta que motiva la siguiente sección es: ¿Existe una escala temporal óptima para analizar las transiciones que capture la micro-dinámica oculta dentro de cada época?
+
+\section{Determinación de la Escala Temporal: Criterio Multi-Objetivo}
+
+El análisis markoviano anterior demostró que el sueño es un proceso estable con transiciones estructuradas. Sin embargo, Markov asume tiempos de permanencia fijos (distribución geométrica). Para abordar la \textbf{Hipótesis H2 (Lingüística)} ---que los hipnogramas pueden tratarse como secuencias simbólicas con propiedades análogas a las de un lenguaje natural---, buscamos la escala de tokenización $N$ que produzca el mejor compromiso entre estructura tipo lenguaje, calidad del ajuste y cobertura de los bloques de Fase 2.
+
+\subsection{Análisis Global: Cola Pesada en la Duración de S2}
+
+Al analizar la distribución de duración de los bloques continuos de S2 sobre la noche completa, los datos exhiben una \textbf{distribución de cola pesada}. Sobre los 4 437 bloques de S2 del dataset unificado, la duración media es de 12.10 épocas pero la mediana es de apenas 5 épocas, con un percentil 90 de 34 épocas: existen segmentos de S2 que duran desde 30 segundos hasta más de 15 minutos, sin una escala característica única.
+
+Este comportamiento confirma que, a nivel global, el sueño carece de una duración ``típica'' para la Fase 2, y que la media está fuertemente sesgada por los bloques largos. Esto invalida metodológicamente el uso de una ventana basada en el promedio global: necesitamos un criterio de selección más robusto.
+
+\subsection{Exploración Matemática: El Barrido de N-gramas}
+
+Para buscar estructura, realizamos un barrido sistemático de n-gramas sobre un amplio rango de escalas ($N$ desde 1 hasta 100 épocas). En cada escala calculamos la distribución rango-frecuencia y su ajuste a una Ley de Zipf \cite{zipf1949human}, cuya pendiente característica $\beta \approx 1$ (en valor absoluto del exponente en escala log-log) señala la eficiencia informativa propia de los lenguajes naturales.
+
+\textbf{¿Por qué la ley de Zipf?} En cualquier idioma humano, si ordenamos las palabras de la más usada a la menos usada, la frecuencia de cada una cae siguiendo una regla muy precisa: la segunda palabra más común aparece la mitad de veces que la primera, la tercera un tercio, y así sucesivamente. Esa regularidad ---la ley de Zipf, con exponente cercano a 1--- no es un capricho estadístico: es la huella de un sistema que reparte la información de forma eficiente, combinando unos pocos elementos muy frecuentes con muchos elementos raros pero específicos. La pregunta que nos hacemos es directa: si troceamos el hipnograma en ``palabras'' de $N$ épocas, ¿esas palabras se distribuyen como las de un idioma? Si la respuesta es sí, entonces el sueño no es una sucesión aleatoria de etapas, sino una secuencia con gramática. El barrido busca, por tanto, la longitud de ``palabra'' $N$ a la que el sueño se parece más a un lenguaje.
+
+La Tabla \ref{tab:barrido_ngramas} resume los hallazgos cuantitativos sobre la cohorte de 127 pacientes sanos:
+
+\begin{table}[htbp]
+\centering
+\caption{Resultados del barrido de n-gramas: exponente de Zipf y calidad del ajuste.}
+\label{tab:barrido_ngramas}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}rrrrl}
+\hline
+$N$ & Tiempo & $\beta$ & $R^2$ & Interpretación \\
+\hline
+1 & 30s & 1.195 & 0.980 & Fragmentación alta \\
+2 & 1 min & 2.836 & 0.802 & Ley de potencia abrupta \\
+5 & 2.5 min & 1.853 & 0.966 & Perfil supra-Zipfiano \\
+\textbf{6} & \textbf{3 min} & \textbf{1.597} & \textbf{0.977} & \textbf{Mejor compromiso global} \\
+8 & 4 min & 1.250 & 0.972 & Cercano a Zipf \\
+10 & 5 min & 1.009 & 0.952 & $\beta$ más próximo a 1 \\
+15 & 7.5 min & 0.669 & 0.843 & Degradación estadística \\
+50 & 25 min & 0.200 & 0.430 & Colapso del ajuste \\
+100 & 50 min & 0.059 & 0.172 & Secuencias casi únicas \\
+\hline
+\end{tabular*}
+\end{table}
+
+La Figura \ref{fig:leypotencia_6} muestra la rejilla de distribuciones frecuencia--rango en escala log-log para distintos valores de $N$, y la Figura \ref{fig:beta_vs_n} traza la evolución del exponente $\beta$ en función de $N$.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1.0\textwidth]{zipf_loglog_grid.png}
+    \caption{Distribución frecuencia--rango de n-gramas en escala log-log (127 pacientes sanos) para varios valores de $N$. La linealidad es máxima en las escalas intermedias, donde la distribución se aproxima a una Ley de Zipf.}
+    \label{fig:leypotencia_6}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{zipf_beta_vs_n.png}
+    \caption{Exponente de Zipf $\beta$ en función de $N$. El exponente decrece monótonamente con la longitud del n-grama y cruza el valor de referencia $\beta=1$ entre $N=8$ ($\beta=1.250$) y $N=10$ ($\beta=1.009$).}
+    \label{fig:beta_vs_n}
+\end{figure}
+
+\textbf{Matiz honesto:} El exponente $\beta$ decrece de forma continua con $N$, de modo que el valor más cercano a la referencia $\beta=1$ se alcanza en $N=10$ ($\beta=1.009$), no en $N=6$. Sin embargo, $\beta$ por sí solo no basta como criterio: a medida que crece $N$, la calidad del ajuste ($R^2$) y la cobertura de los bloques de S2 se deterioran. Por ello, la elección de $N$ no puede reducirse a minimizar $|\beta-1|$. Conviene además ser cauto con la interpretación: un buen ajuste lineal en escala log-log es \textit{compatible} con una ley de potencia, pero no constituye una prueba formal de ella (otras distribuciones de cola pesada producen rectas similares en rangos acotados). Por eso, a lo largo del texto hablamos de distribución \textit{compatible} con la ley de Zipf y no de una ley de potencia demostrada.
+
+\subsection{Selección Multi-Criterio de N}
+
+Un solo número puede engañar. Si nos guiáramos únicamente por el exponente $\beta$, elegiríamos la escala donde el sueño ``parece'' más un idioma; pero ese parecido podría ser una ilusión si los datos en realidad no se alinean bien, o si la escala es tan grande que cada ``palabra'' aparece una única vez en toda la noche y, por tanto, no describe nada reutilizable. Por eso evaluamos cada candidato $N$ con \textbf{tres preguntas complementarias}, cada una de las cuales vigila un punto ciego de las otras dos:
+
+\begin{enumerate}
+    \item \textbf{¿Se parece a un lenguaje?} ---Proximidad a Zipf, medida como $|\beta - 1|$. Cuanto más cerca está el exponente de 1, más se ajusta la distribución de n-gramas al reparto eficiente de información típico de un idioma.
+    \item \textbf{¿Es confiable ese parecido?} ---Calidad del ajuste, el coeficiente $R^2$ de la regresión log-log. Un $\beta$ ideal no significa nada si la nube de puntos no cae realmente sobre una recta; $R^2$ mide cuán sólida es la ley y descarta coincidencias espurias.
+    \item \textbf{¿Describe el sueño real?} ---Cobertura, el porcentaje de épocas de S2 que quedan contenidas en bloques de longitud $\geq N$. A medida que $N$ crece, las ``palabras'' se vuelven tan específicas que casi no se repiten (se convierten en \textit{hápax}) y dejan de representar el sueño efectivo; la cobertura penaliza esa fragmentación.
+\end{enumerate}
+
+La clave es que estos tres criterios están \textbf{en tensión}: al alargar la ventana $N$, el exponente $\beta$ mejora y se acerca a 1 (el sueño ``suena'' más a idioma), pero simultáneamente se degradan el ajuste $R^2$ y la cobertura, porque las secuencias largas se vuelven únicas. Al acortarla ocurre lo contrario: cobertura altísima, pero un $\beta$ demasiado pronunciado. No existe un $N$ que gane en los tres a la vez, así que la decisión honesta no es maximizar una métrica, sino \textbf{buscar el mejor equilibrio}. Para ello traducimos cada criterio a una posición en un \textit{ranking} sobre los candidatos y promediamos las tres posiciones (menor es mejor).
+
+\begin{table}[htbp]
+\centering
+\caption{Selección multi-criterio de $N$. El \textit{score} medio promedia los tres rankings; menor es mejor.}
+\label{tab:seleccion_N}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}rrrrrr}
+\hline
+$N$ & $\beta$ & $R^2$ & Cobertura S2 (\%) & \textit{Score} medio & Posición \\
+\hline
+\textbf{6} & \textbf{1.597} & \textbf{0.977} & \textbf{47.33} & \textbf{3.33} & \textbf{1.\textsuperscript{o}} \\
+7 & 1.405 & 0.977 & 44.24 & 3.67 & 2.\textsuperscript{o} \\
+8 & 1.250 & 0.972 & 41.00 & 3.67 & 2.\textsuperscript{o} \\
+9 & 1.121 & 0.964 & 38.07 & 4.00 & 4.\textsuperscript{o} \\
+5 & 1.853 & 0.966 & 51.77 & 4.33 & 5.\textsuperscript{o} \\
+10 & 1.009 & 0.952 & 35.99 & 4.33 & 5.\textsuperscript{o} \\
+12 & 0.835 & 0.913 & 31.49 & 5.67 & 7.\textsuperscript{o} \\
+15 & 0.669 & 0.843 & 25.96 & 7.00 & 8.\textsuperscript{o} \\
+\hline
+\end{tabular*}
+\end{table}
+
+El ganador es \textbf{$N=6$} (\textit{score} medio 3.33): aunque su $\beta$ no es el más cercano a 1, presenta el mejor $R^2$ del barrido (0.977) y conserva una cobertura del 47.33\% de las épocas de S2, logrando el equilibrio más favorable entre los tres objetivos. La Figura \ref{fig:justif_N} integra visualmente estos criterios.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1.0\textwidth]{justificacion_N_combinada.png}
+    \caption{Selección de $N$ combinando el exponente de Zipf, la mediana y media de la duración de bloques S2, y la cobertura. La franja señalada corresponde a la región donde convergen los criterios, con $N=6$ como mejor compromiso.}
+    \label{fig:justif_N}
+\end{figure}
+
+La Figura \ref{fig:ciclo1} presenta el histograma de duración de los bloques de S2 que respalda el criterio de cobertura.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1.0\textwidth]{duracion_s2_histograma.png}
+    \caption{Distribución de la duración de los bloques continuos de S2 (todos los pacientes). La mediana (5 épocas) y la media (12.10 épocas) divergen por la cola pesada de la distribución; una ventana de $N=6$ épocas cubre el 47.33\% del tiempo total en S2.}
+    \label{fig:ciclo1}
+\end{figure}
+
+\subsection{Conclusión: una Escala Justificada, no Arbitraria}
+
+La elección de $N=6$ (3 minutos) no descansa en un único número ni en una coincidencia: emerge del mejor compromiso entre tres criterios cuantitativos independientes evaluados sobre toda la cohorte. Esta escala es la unidad fundamental para el análisis de trayectorias vectoriales de la siguiente sección, y \textbf{apoya la Hipótesis H2 (Lingüística)}: existe una resolución temporal en la que la distribución de n-gramas de sueño es compatible con la organización estadística de un lenguaje natural.
+
+\subsection{Integración con el Análisis Markoviano}
+
+La cola pesada en la duración de S2 explica por qué el análisis markoviano clásico, aunque correcto en sus conclusiones sobre estabilidad y rutas de transición, no puede capturar la dinámica interna de las fases. La distribución geométrica implícita en Markov predice tiempos de permanencia exponencialmente decrecientes, pero los datos reales muestran una cola pesada con eventos de larga duración que ocurren con probabilidad no despreciable. Esta discrepancia justifica incorporar modelos que capturen dependencias de largo plazo mediante representación vectorial (Word2Vec). La ventana $N=6$ será la unidad fundamental para el análisis de trayectorias.
+
+\section{Topología Basal del Espacio Latente: Validación con Unigramas}
+
+Aunque el modelo dinámico opera sobre secuencias complejas de 6 épocas ($N=6$), es fundamental validar primero si el algoritmo ha aprendido correctamente las relaciones entre los \textbf{estados fundamentales} del sueño. Si los ``ladrillos'' básicos (las fases individuales) no están bien posicionados geométricamente en el espacio vectorial, cualquier análisis de secuencias complejas carecería de validez.
+
+Para esta validación topológica, extrajimos los embeddings correspondientes a los \textbf{unigramas} (los tokens unitarios: W, S1, S2, SWS, REM y Sin clasificar) y proyectamos su estructura utilizando UMAP. Esto nos permite visualizar el ``esqueleto'' o la estructura canónica del espacio latente sin el ruido visual que introducirían los 1 503 6-gramas del vocabulario.
+
+\subsection{Proyección UMAP: El Mapa de los Estados Canónicos}
+
+La Figura \ref{fig:umap_unigramas_2d} muestra la disposición espacial de las fases (unigramas) en el espacio vectorial aprendido. A modo de anticipo, la Figura \ref{fig:umap_6g_3d} proyecta además el espacio de 6-gramas en 3D, cuya estructura de trayectorias se analiza en detalle en las secciones siguientes.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{umap2d_1g.png}
+    \caption{Topología basal del espacio latente (Proyección UMAP 2D de Unigramas). Los estados puros revelan la arquitectura fundamental del espacio de fases, con la Fase 2 actuando como nodo central entre el sueño profundo (SWS) y el REM.}
+    \label{fig:umap_unigramas_2d}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{umap3d_6g.png}
+    \caption{Proyección UMAP 3D del espacio de 6-gramas (anticipo). La estructura tridimensional ilustra cómo las secuencias se organizan a lo largo de múltiples ejes de variación fisiológica, formando trayectorias continuas entre los polos de consolidación y activación.}
+    \label{fig:umap_6g_3d}
+\end{figure}
+
+\subsection{Validación Cuantitativa: Matriz de Similitud Coseno}
+
+Para complementar la visualización topológica con evidencia numérica, calculamos la similitud coseno entre todos los pares de unigramas directamente en el espacio de embeddings de 24 dimensiones del modelo de unigramas (Tabla \ref{tab:similitud_unigramas}). Estos valores son independientes de la proyección UMAP y reflejan las relaciones aprendidas por el modelo.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Matriz de Similitud Coseno entre Unigramas. Valores positivos indican vectores orientados en direcciones similares; valores negativos indican orientaciones opuestas.}
+    \label{tab:similitud_unigramas}
+    \begin{tabular}{lrrrrrr}
+        \toprule
+        & \textbf{W} & \textbf{S1} & \textbf{S2} & \textbf{SWS} & \textbf{REM} & \textbf{S.C.} \\
+        \midrule
+        \textbf{W} & 1.000 & 0.178 & $-$0.719 & $-$0.221 & $-$0.221 & 0.135 \\
+        \textbf{S1} & 0.178 & 1.000 & $-$0.286 & $-$0.593 & 0.040 & $-$0.283 \\
+        \textbf{S2} & $-$0.719 & $-$0.286 & 1.000 & 0.302 & $-$0.248 & $-$0.363 \\
+        \textbf{SWS} & $-$0.221 & $-$0.593 & 0.302 & 1.000 & $-$0.437 & 0.091 \\
+        \textbf{REM} & $-$0.221 & 0.040 & $-$0.248 & $-$0.437 & 1.000 & $-$0.073 \\
+        \textbf{S.C.} & 0.135 & $-$0.283 & $-$0.363 & 0.091 & $-$0.073 & 1.000 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Los valores confirman cuantitativamente las observaciones topológicas:
+\begin{itemize}
+    \item \textbf{Continuidad NREM:} S2 y SWS son los únicos estados de sueño consolidado con similitud claramente positiva ($+$0.302), confirmando su continuidad funcional dentro del NREM.
+    \item \textbf{Oposición Vigilia--S2:} La similitud fuertemente negativa entre W y S2 ($-$0.719) refleja que vigilia y sueño consolidado ocupan direcciones opuestas en el espacio vectorial.
+    \item \textbf{Aislamiento del REM:} El REM mantiene similitudes negativas con S2 ($-$0.248) y SWS ($-$0.437), confirmando que ocupa una dirección distintiva, coherente con su naturaleza paradójica.
+    \item \textbf{Inestabilidad de S1:} S1 se relaciona positivamente con la vigilia ($+$0.178) y negativamente con el sueño profundo ($-$0.593), consistente con su rol de estado de transición superficial.
+\end{itemize}
+
+\subsection{Interpretación Fisiológica de la Geometría}
+
+El mapa revela una organización coherente con la fisiología del sueño, validando que el entrenamiento con n-gramas logró capturar, como efecto emergente, la semántica de los estados individuales:
+
+\begin{enumerate}
+    \item \textbf{Polaridad de Profundidad:} La dimensión primaria de variación separa los estados de sueño consolidado (S2, SWS) de la vigilia, que aparecen en oposición directa ($-$0.719). El modelo aprendió el concepto de ``profundidad de sueño'' como factor dominante de organización.
+
+    \item \textbf{Ortogonalidad del REM:} El estado REM se agrupa en una región topológicamente distinta, con similitudes negativas frente al NREM. Esto refleja su naturaleza paradójica: espectralmente activo pero conductualmente profundo.
+
+    \item \textbf{Proximidad S2--SWS:} La Fase 2 y el Sueño Profundo aparecen cercanos ($+$0.302), reflejando su continuidad funcional dentro del sueño NREM y confirmando que S2 es la ``puerta de entrada'' al sueño profundo.
+\end{enumerate}
+
+\subsection{S2 como Hub Geométrico}
+
+Un hallazgo particularmente relevante es la posición de la \textbf{Fase 2}. Su ubicación le permite actuar como un \textit{nodo de transición}: es el único estado con vínculo positivo hacia el SWS, mientras mantiene direcciones diferenciadas respecto al REM. Esta geometría es coherente con el rol de S2 como ``Hub Dinámico'' identificado en el análisis markoviano: es el estado desde el cual el sistema puede bifurcarse hacia profundización (SWS) o activación paradójica (REM).
+
+\subsection{Conclusión de la Validación Topológica}
+
+La proyección de unigramas confirma que el modelo Word2Vec ha construido un \textbf{sistema de coordenadas biológicamente válido}. Los ``átomos'' del sueño están correctamente posicionados:
+\begin{itemize}
+    \item Vigilia: polo opuesto al sueño consolidado.
+    \item S2 y SWS: polo de consolidación NREM.
+    \item REM: dirección distintiva de activación paradójica.
+\end{itemize}
+
+Con esta confianza en la arquitectura basal del espacio latente, podemos proceder en la siguiente sección a analizar cómo las secuencias complejas ($N=6$) ``navegan'' a través de este mapa en tiempo real, revelando la dinámica anticipatoria de las transiciones.
+
+\section{Dinámica de Transiciones: Trayectorias Anticipatorias}
+
+Habiendo validado la topología estática, abordamos la \textbf{Hipótesis H3 (Dinámica)}: la representación vectorial de la salida de S2 codifica información sobre su destino (REM frente a SWS) y permite anticipar la transición antes de que sea clínicamente visible. Esta sección aporta la primera pieza de evidencia ---la \textit{geometría} del espacio de embeddings---, que más adelante se complementa con la prueba predictiva directa del modelo recurrente (Sección \ref{sec:lstm}).
+
+Para ello ejecutamos el experimento de \textbf{Ventanas Deslizantes} (interpolación sintética), midiendo cómo evoluciona la \textbf{Similitud Coseno} de un vector de S2 puro conforme se infiltran progresivamente épocas del estado destino.
+
+\subsection{El Experimento del Deslizador}
+
+Se generaron secuencias sintéticas partiendo de un bloque basal ($t_0$) de 6 épocas de Fase 2. En cada paso temporal $t$, se sustituyó una época de S2 por una del estado destino (REM o SWS), simulando una transición gradual:
+
+\begin{itemize}
+    \item \textbf{Origen ($t_0$):} Vector de \texttt{[S2, S2, S2, S2, S2, S2]} $\rightarrow$ Similitud = 1.0
+    \item \textbf{Hacia SWS:} Transición progresiva hacia \texttt{[SWS, SWS, SWS, SWS, SWS, SWS]}
+    \item \textbf{Hacia REM:} Transición progresiva hacia \texttt{[REM, REM, REM, REM, REM, REM]}
+\end{itemize}
+
+Este diseño experimental aísla el efecto puro de cada transición, eliminando la variabilidad de los datos reales.
+
+\subsection{Bifurcación de Trayectorias}
+
+La Figura \ref{fig:trayectorias_bifurcacion} ilustra la evolución de la Similitud Coseno respecto al vector origen ($t_0$), para las dos rutas de destino. La Tabla \ref{tab:deslizador} reporta los valores exactos.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{similitud_origen.png}
+    \caption{Dinámica de separación de fases ($N=6$): similitud coseno respecto al origen S2 conforme se infiltran épocas del destino. Las dos rutas (hacia SWS y hacia REM) describen trayectorias distinguibles, evidencia de que la representación de S2 codifica información sobre su destino.}
+    \label{fig:trayectorias_bifurcacion}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{Similitud coseno respecto al origen S2 en cada paso de infiltración (datos reales).}
+\label{tab:deslizador}
+\begin{tabular}{ccc}
+\hline
+\textbf{Paso} & \textbf{Hacia SWS} & \textbf{Hacia REM} \\
+\hline
+0 & 1.000 & 1.000 \\
+1 & 0.568 & 0.597 \\
+2 & 0.469 & 0.452 \\
+3 & 0.181 & 0.246 \\
+4 & 0.126 & 0.218 \\
+5 & 0.035 & 0.365 \\
+6 & 0.135 & 0.392 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Análisis Cuantitativo de la Divergencia}
+
+Los resultados aportan la primera evidencia geométrica de la \textbf{Hipótesis H3}: la trayectoria del vector depende del destino. Las diferencias clave son:
+
+\begin{enumerate}
+    \item \textbf{Hacia SWS (alejamiento profundo):} La ruta hacia el sueño profundo aleja más la representación del origen S2. El área bajo la curva de similitud al origen es de 1.946, y alcanza su valor mínimo en el paso 5 (similitud 0.035), justo antes de consolidarse como bloque SWS puro.
+
+    \item \textbf{Hacia REM (alejamiento moderado con recuperación):} La ruta hacia REM conserva mayor similitud con el origen (área bajo la curva de 2.574) y, tras el descenso intermedio, repunta hacia el final (0.365 en el paso 5 y 0.392 en el paso 6) a medida que el bloque REM se consolida en una dirección propia.
+
+    \item \textbf{Distinguibilidad de rutas:} Las dos trayectorias son separables a lo largo de toda la infiltración, lo que indica que el espacio de embeddings no representa todas las salidas de S2 por igual, sino de forma diferenciada según el destino.
+\end{enumerate}
+
+\subsection{Qué Prueba y Qué No Prueba el Deslizador}
+
+Conviene ser preciso sobre el alcance de este experimento. Las secuencias del deslizador son \textbf{sintéticas} y construidas insertando progresivamente el símbolo destino (por ejemplo, \texttt{2-2-2-2-4-4} ya contiene dos épocas de REM). Por tanto, que la ventana ``hacia REM'' se parezca cada vez más a REM no es, por sí mismo, una demostración de anticipación: en parte refleja que el destino ya está presente en el token. Además, existe una \textbf{limitación arquitectónica} de fondo: una época de S2 pura es siempre el mismo token (\texttt{2-2-2-2-2-2}), de modo que Word2Vec le asigna \textit{un único vector} con independencia de hacia dónde transite la noche real; un embedding estático no puede, por construcción, distinguir una ``S2 pre-REM'' de una ``S2 pre-SWS'' mientras la ventana siga siendo S2 pura.
+
+Lo que el deslizador sí establece es que la \textbf{geometría del espacio de embeddings está bien organizada y es coherente con la fisiología}: las rutas de salida hacia SWS y hacia REM ocupan direcciones distintas y separables, con asimetrías reproducibles. Es una validación de la representación, no una prueba de anticipación en datos reales. La evidencia de anticipación \textit{propiamente dicha} ---asignar mayor probabilidad al destino antes de que la transición ocurra en hipnogramas reales--- la aporta el modelo recurrente con memoria (Sección \ref{sec:lstm}), que sí puede dar valores distintos a dos épocas de S2 idénticas según la historia que las precede.
+
+\subsection{Control de Subrogados y Prueba de Permutación}
+
+Como \textbf{control de robustez de la Hipótesis H3}, repetimos el experimento utilizando \textbf{datos subrogados} (\textit{shuffled}): se destruye la secuencia cronológica de las fases del sueño pero se preservan sus frecuencias globales, de modo que cualquier diferencia respecto a los datos reales debe atribuirse al \textit{orden} y no a la composición.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{real_vs_surrogate.png}
+    \caption{Comparación de los datos reales frente a las \textbf{50 realizaciones subrogadas} ($N=6$). Las líneas sólidas son las trayectorias reales (S2$\rightarrow$REM y S2$\rightarrow$SWS); las líneas tenues son las 50 trayectorias subrogadas (cada una con su propia permutación intra-paciente y su reentrenamiento independiente de Word2Vec). Las trayectorias reales quedan dentro del haz de las subrogadas: la separación observada no se distingue de la que produce el azar, como confirma la prueba de permutación (Figura \ref{fig:null_dist}).}
+    \label{fig:surrogates}
+\end{figure}
+
+\subsubsection{Interpretación del Control}
+
+Una \textit{única} realización subrogada produce una separación acumulada de \textbf{0.585} frente a \textbf{0.791} en los datos reales ---una razón de 1.351---, lo que a primera vista sugeriría que el orden temporal aporta la diferencia. Sin embargo, \textbf{una sola permutación no constituye una prueba de significancia}: el valor subrogado depende de la realización concreta.
+
+\textbf{Prueba de permutación.} Para evaluarlo correctamente generamos una \textbf{distribución nula} con \textbf{50 realizaciones subrogadas} independientes (cada una con su propia permutación intra-paciente y su reentrenamiento completo de Word2Vec). El resultado refuta el control de una sola realización: la separación real (0.791) cae en el \textbf{percentil 70} de la distribución nula ---\textbf{15 de 50} subrogados separan \textit{más} que los datos reales---, con un \textbf{$p$-valor empírico de 0.31} (Figura \ref{fig:null_dist}). La separación de trayectorias del deslizador \textbf{no es estadísticamente distinguible de la que produce el azar}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{null_distribution.png}
+    \caption{Distribución nula de la separación de trayectorias (50 subrogados con reentrenamiento independiente de Word2Vec). La separación real (línea roja, 0.791) queda en el percentil 70 ($p=0.31$); la razón 1.351 de una única realización era una extracción atípicamente baja del nulo.}
+    \label{fig:null_dist}
+\end{figure}
+
+\textbf{Por qué falla el control.} Al permutar las fases dentro de cada noche se destruye la inercia del sueño y el vocabulario de 6-gramas se dispara (de 2817 a unos 16\,000 tokens distintos); los \textit{embeddings} de las trayectorias sintéticas pasan a estimarse sobre ese vocabulario ruidoso y adquieren una varianza alta, de modo que los subrogados producen con frecuencia separaciones \textit{mayores} que los datos reales por puro azar. Este resultado, junto con el colapso ante ventanas disjuntas (Sección \ref{sec:deslizador_stride}), confirma que la geometría del deslizador es una \textbf{ilustración del espacio latente y no una prueba de anticipación}. La evidencia propiamente dicha de H3 ---anticipación sobre datos reales--- descansa en la red \textbf{LSTM} (Sección \ref{sec:lstm}), que sí supera su propio control con secuencias barajadas.
+
+\subsection{Control de Robustez: Ventanas Disjuntas}
+\label{sec:deslizador_stride}
+
+El deslizador se construyó sobre ventanas \textbf{solapadas} (paso 1): dos 6-gramas consecutivos comparten cinco de sus seis épocas, lo que introduce autocorrelación entre tokens vecinos (limitación ya señalada en la metodología). Para evaluar cuánto de la separación de trayectorias depende de ese solapamiento, reentrenamos Word2Vec con \textbf{ventanas disjuntas} (paso 6, sin solapamiento) y con un paso intermedio (paso 3), y reconstruimos las trayectorias.
+
+\begin{table}[htbp]
+\centering
+\caption{Robustez del deslizador al paso de tokenización. La separación real cae de forma monótona al reducir el solapamiento y, con ventanas disjuntas, invierte incluso el control de subrogado (razón $<1$). La cobertura de los 13 tokens del deslizador se mantiene completa, de modo que el colapso \textit{no} se debe a tokens ausentes del vocabulario.}
+\label{tab:stride}
+\footnotesize\setlength{\tabcolsep}{4pt}%
+\begin{tabular}{@{}cccccc@{}}
+\toprule
+\textbf{Paso} & \textbf{Tokens} & \textbf{Cobertura} & \textbf{Sep.\ real} & \textbf{Sep.\ subr.} & \textbf{Razón} \\
+\midrule
+1 (solapado) & 112\,k & 13/13 & 0.791 & 0.585 & 1.351 \\
+3 (intermedio) & 37\,k & 13/13 & 0.611 & 1.262 & 0.484 \\
+6 (disjunto) & 18\,k & 13/13 & 0.234 & 0.961 & 0.243 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La separación real decrece de forma \textbf{monótona} con el paso (0.791 $\rightarrow$ 0.611 $\rightarrow$ 0.234) y, con ventanas disjuntas, las rutas hacia REM y hacia SWS se vuelven prácticamente indistinguibles (Figura \ref{fig:stride6}): el deslizador deja de bifurcar e incluso falla su propio control de subrogado (razón 0.243, es decir, la separación real resulta \textit{menor} que la subrogada).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{stride6_real_vs_surrogate.png}
+    \caption{Deslizador reentrenado con ventanas disjuntas (paso 6). Las trayectorias reales hacia REM (morado) y hacia SWS (azul) quedan superpuestas: sin solapamiento de ventanas, el espacio de \textit{embeddings} ya no separa el destino.}
+    \label{fig:stride6}
+\end{figure}
+
+\textbf{Lectura calibrada.} Este colapso es \textbf{consistente con} la preocupación de autocorrelación señalada en la metodología: buena parte del gradiente suave del deslizador lo crea el solapamiento de ventanas. No conviene, sin embargo, sobre-atribuirlo a un único factor: el paso disjunto elimina la autocorrelación \textit{pero también} reduce el corpus en un factor de seis (112\,k $\rightarrow$ 18\,k tokens), lo que por sí solo añade ruido a los \textit{embeddings}; con estos datos ambas causas no se separan limpiamente. Lo que sí queda establecido es que la geometría del deslizador \textbf{no es robusta a la tokenización}, lo que confirma su carácter \textit{ilustrativo} ---de la organización del espacio latente--- y no probatorio. La evidencia central de la Hipótesis H3 \textbf{no se ve afectada}: descansa en la red \textbf{LSTM} (Sección \ref{sec:lstm}), un modelo recurrente por época con memoria genuina, independiente de la geometría de ventanas solapadas de Word2Vec.
+
+\subsection{Síntesis: Confirmación de Hipótesis}
+
+La integración de los experimentos de trayectorias permite concluir:
+
+\begin{table}[htbp]
+    \centering
+    \caption{Resumen de Validación de Hipótesis}
+    \label{tab:resumen_hipotesis}
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.26\textwidth}>{\raggedright\arraybackslash}p{0.14\textwidth}>{\raggedright\arraybackslash}p{0.37\textwidth}@{}}
+        \toprule
+        \textbf{Hipótesis} & \textbf{Predicción} & \textbf{Resultado} & \textbf{Evidencia} \\
+        \midrule
+        H1 (Estructural) & Sueño no aleatorio, estructurado & Apoyada & Markov: inercia alta, sin atajo SWS$\rightarrow$REM, degradación por ciclos \\
+        H2 (Lingüística) & Distribución tipo lenguaje a una escala $N$ & Apoyada & Zipf compatible; $N=6$ por criterio multi-objetivo \\
+        H3 (Dinámica) & Salida de S2 dependiente del destino y anticipable & Apoyada (parcial) & LSTM anticipa en datos reales: la pendiente hacia REM es significativa frente a 50 barajadas ($p=0.02$; SWS marginal, $p=0.10$). El deslizador es ilustrativo: su separación no es significativa ($p=0.31$) ni sobrevive a ventanas disjuntas \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\textbf{Interpretación fisiológica:} El espacio vectorial aprendido representa de forma diferenciada las salidas de S2 según su destino. La transición hacia SWS aleja más la ventana del origen S2 (menor similitud acumulada al origen), mientras que la transición hacia REM conserva más rasgos del estado de partida a lo largo de la ventana (mayor similitud acumulada al origen). Esta asimetría es consistente con la arquitectura neurofisiológica subyacente y podría reflejarla, pese a que el modelo no recibió información explícita sobre electrofisiología.
+
+\section{Modelado Predictivo: Red LSTM como Modelo de Lenguaje}
+\label{sec:lstm}
+
+Los experimentos anteriores caracterizan la \textit{geometría} del espacio de fases, pero no prueban anticipación sobre datos reales. Esta sección aporta la \textbf{prueba central de la Hipótesis H3}: para evaluar si la secuencia contiene información \textbf{predictiva} de la siguiente fase ---y, en particular, si el modelo anticipa la transición \textit{antes} de que ocurra en hipnogramas reales---, entrenamos una red \textbf{LSTM} sobre los embeddings congelados de los 6-gramas (Capítulo \ref{marcoteo}), tratando la noche de sueño como un modelo de lenguaje que estima $P(w_t \mid w_{<t})$. A diferencia del deslizador, la memoria recurrente permite que dos épocas de S2 idénticas reciban probabilidades distintas según la historia que las precede, condición necesaria para hablar de anticipación.
+
+\subsection{Desempeño Global frente a Líneas Base}
+
+La Tabla \ref{tab:lstm_resumen} compara la LSTM con dos líneas base: un modelo de Markov de primer orden y un predictor de persistencia (``la siguiente fase es igual a la actual''). La Figura \ref{fig:lstm_vs_markov} ilustra la comparación.
+
+\textbf{¿Cómo se leen estas métricas?} La \textbf{exactitud} es simplemente el porcentaje de épocas predichas correctamente; al estar el sueño dominado por unas pocas fases muy frecuentes (sobre todo S2), puede ser engañosamente alta. El \textbf{Macro-F1} corrige ese sesgo: el F1 combina en un solo número la precisión y la cobertura de cada fase (su media armónica), y el prefijo ``macro'' indica que se promedian los F1 de las cinco fases dando a cada una el mismo peso, de modo que acertar una fase rara cuenta tanto como acertar una frecuente. Las dos últimas columnas repiten ambas ideas pero \textbf{solo sobre los instantes de cambio de fase} (las transiciones), que son los momentos clínicamente interesantes y los más difíciles de predecir.
+
+\begin{table}[htbp]
+\centering
+\caption{Desempeño de la LSTM frente a líneas base. La columna ``transición'' mide la exactitud restringida a los instantes en que la fase realmente cambia.}
+\label{tab:lstm_resumen}
+\noindent\adjustbox{max width=\textwidth}{%
+\begin{tabular}{lrrrr}
+\hline
+\textbf{Modelo} & \textbf{Exactitud} & \textbf{Macro-F1} & \textbf{Exact. transición} & \textbf{F1 transición} \\
+\hline
+Markov (1.\textsuperscript{er} orden) & 0.880 & 0.823 & 0.000 & 0.000 \\
+Persistencia & 0.880 & 0.823 & 0.000 & 0.000 \\
+LSTM (real) & 0.744 & 0.608 & 0.288 & 0.238 \\
+LSTM (subrogada) & 0.262 & 0.213 & --- & --- \\
+\hline
+\end{tabular}}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{lstm_vs_markov.png}
+    \caption{Comparación de la LSTM frente a los modelos de Markov y de persistencia. La matriz de confusión correspondiente a la LSTM se muestra en la Figura \ref{fig:confusion_lstm}.}
+    \label{fig:lstm_vs_markov}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{confusion_real.png}
+    \caption{Matriz de confusión de la LSTM (datos reales). El modelo concentra los aciertos en las fases dominantes y reparte sus errores principalmente entre fases contiguas.}
+    \label{fig:confusion_lstm}
+\end{figure}
+
+\textbf{Hallazgo honesto:} En exactitud global, la LSTM (0.744) \textit{no supera} a la persistencia ni a Markov (ambos 0.880). Conviene aclarar por qué ambas líneas base arrojan cifras \textit{idénticas}: dado que en toda fila de la matriz de transición la mayor probabilidad corresponde a la diagonal (todas las $P(i|i)>0.5$, Tabla \ref{tab:diagonal_global}), el estado más probable según Markov de orden 1 es siempre el estado actual. Es decir, Markov de orden 1 \textbf{colapsa exactamente en la persistencia}; no son dos baselines independientes sino el mismo predictor por construcción. Esta coincidencia no es una deficiencia, sino una consecuencia directa de la altísima inercia del sueño: como la fase casi siempre se mantiene, ``repetir la fase anterior'' es difícil de batir en exactitud bruta. La diferencia decisiva aparece en las \textbf{transiciones}: en los instantes de cambio de fase, ambas aciertan el 0\% (por construcción, nunca predicen el cambio), mientras que la LSTM alcanza una exactitud de transición de 0.288 y un F1 de 0.238. La LSTM aporta justamente lo que las líneas base no pueden: anticipar los puntos de cambio.
+
+La versión \textbf{subrogada} de la LSTM (entrenada y evaluada sobre secuencias permutadas dentro de cada paciente) cae a 0.262 de exactitud. Nótese que este valor queda \textit{por debajo} de la clase mayoritaria (predecir siempre S2 daría $\approx$0.48): al destruir el orden temporal, el modelo pierde toda capacidad de aprovechar la persistencia y no se limita a predecir la fase más frecuente. Esto indica que el desempeño del modelo real proviene de la estructura temporal y no de las frecuencias marginales de las fases.
+
+\subsection{Anticipación de Transiciones: Bifurcación Pre-Cambio}
+
+Para verificar si la LSTM \textit{anticipa} las transiciones, analizamos la probabilidad que asigna al estado destino en las 15 épocas previas a una transición real hacia REM o SWS, contrastándola con un control barajado. La Figura \ref{fig:lstm_banda} muestra esta evolución frente a las 50 redes barajadas.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{lstm_bifurcacion_banda.png}
+    \caption{Probabilidad que la LSTM asigna al estado destino en las 15 épocas previas a la transición, para la red entrenada con datos \textbf{reales} (línea de color) y para las \textbf{50 redes barajadas} (curvas grises tenues; su media en trazo discontinuo). Hacia \textbf{REM} (derecha) la trayectoria real se despega por encima de \textit{todas} las barajadas al acercarse al cambio ($t=0$); hacia \textbf{SWS} (izquierda) se mantiene dentro de la nube barajada, en coherencia con el resultado marginal de la prueba de permutación.}
+    \label{fig:lstm_banda}
+\end{figure}
+
+En los datos \textbf{reales}, la probabilidad que la LSTM asigna al destino crece de forma sostenida al aproximarse la transición:
+\begin{itemize}
+    \item \textbf{Hacia REM:} de 0.148 (15 épocas antes) a 0.234 en el instante de la transición, un incremento de +0.086.
+    \item \textbf{Hacia SWS:} de 0.154 a 0.223, un incremento de +0.069.
+\end{itemize}
+
+En el control \textbf{barajado}, en cambio, la trayectoria hacia REM permanece esencialmente plana y las curvas reales se despegan de la nube de las 50 redes barajadas (de forma nítida hacia REM). La LSTM, por tanto, ``siente'' la aproximación de una transición varios minutos antes de que ocurra; el siguiente apartado cuantifica si esa separación es estadísticamente significativa.
+
+\subsection{Significancia de la Anticipación: Prueba de Permutación}
+
+El control de la Figura \ref{fig:lstm_banda} usa las \textbf{50 LSTM barajadas} ---cada una con una permutación intra-paciente distinta y un reentrenamiento independiente--- como distribución nula de la \textbf{pendiente anticipatoria} (el incremento de la probabilidad del destino entre 15 épocas antes de la transición y el instante del cambio). Hacia \textbf{REM}, ese nulo se concentra en torno a cero (media $-0.001$, desviación estándar $0.003$) y ninguna de las 50 redes barajadas reproduce la pendiente del modelo real, con un $p$-valor empírico de $\mathbf{0.02}$: el orden temporal aporta información genuina. Hacia \textbf{SWS}, en cambio, el nulo no está centrado en cero sino desplazado hacia pendientes positivas (media $+0.029$), huella del \textit{artefacto de composición de ventana} ---al acercarse la transición, el contexto tiende a ser S2 puro, lo que altera la probabilidad incluso sin orden temporal---; aunque la pendiente real lo supera, el resultado es solo \textbf{marginal} ($p=0.10$). En conjunto, la prueba de permutación \textbf{confirma con rigor la anticipación hacia REM} y obliga a la \textbf{prudencia con SWS}, donde la señal no se separa limpiamente del artefacto geométrico.
+
+En conjunto, la red recurrente constituye la prueba más directa de la Hipótesis H3: a diferencia de las líneas base ---que nunca anticipan un cambio--- y del deslizador puramente geométrico, la LSTM aprovecha la historia temporal para asignar una probabilidad creciente al estado destino en los minutos previos a una transición real, una señal que se desvanece al permutar la secuencia y que, hacia REM, resulta estadísticamente significativa frente a 50 redes barajadas ($p=0.02$). La Fase 2 emerge así no como un estado de relleno homogéneo, sino como un \textit{hub} dinámico cuya salida queda condicionada por su destino con varios minutos de antelación. Con ello, el recorrido de este capítulo ---de la estructura markoviana basal a la anticipación predictiva del modelo recurrente--- completa la caracterización de la dinámica del sueño sano que motivó esta tesis.

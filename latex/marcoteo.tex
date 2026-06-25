@@ -1,0 +1,360 @@
+\chapter{Marco Teórico}
+\chaptermark{Marco}
+\label{marcoteo}
+
+\section{Antecedentes y Estado del Arte}
+
+El análisis computacional de la arquitectura del sueño ha evolucionado drásticamente, transitando desde modelos estocásticos clásicos hasta las arquitecturas de aprendizaje profundo (Deep Learning) que definen el estado del arte actual. Para situar nuestra contribución, revisamos la evolución de estos paradigmas y sus limitaciones para modelar la dinámica continua.
+
+\subsection{Enfoques Estocásticos y Dinámica Simbólica}
+El modelado matemático del sueño se remonta a los trabajos seminales de \cite{yang1973markov} y \cite{kemp1986analysis}, quienes establecieron que las transiciones entre fases no son aleatorias, sino que siguen una estructura markoviana.
+Sin embargo, estos modelos clásicos enfrentan una limitación teórica fundamental: la \textbf{Propiedad de Falta de Memoria}. Al asumir distribuciones de permanencia geométricas, fallan en capturar la micro-arquitectura del sueño, donde la duración de las fases (especialmente la Fase 2) exhibe un comportamiento de cola pesada o invariante de escala, inconsistente con la caída exponencial de Markov.
+
+Paralelamente, investigadores exploraron la \textbf{Dinámica Simbólica} y medidas de complejidad (como la Entropía de Shannon o Lempel-Ziv) para cuantificar la fragmentación del sueño \cite{bianchi2010probabilistic}. Aunque estos enfoques trataban al hipnograma como una secuencia de símbolos (precursores conceptuales de nuestro enfoque lingüístico), carecían de la capacidad de representación vectorial para capturar la semántica contextual de las transiciones.
+
+Intentos posteriores, como los \textbf{Modelos Ocultos de Markov (HMM)} de \cite{flexer2002continuous}, introdujeron ``estados latentes'' para mitigar la rigidez de Markov, pero su dependencia de distribuciones de duración fijas y su complejidad computacional limitaron su adopción frente a métodos más modernos.
+
+\subsection{La Hegemonía del Deep Learning: Clasificación vs. Interpretación}
+Desde 2017, el campo ha sido dominado por el aprendizaje profundo, enfocado casi exclusivamente en la tarea de \textbf{Clasificación Automática (Sleep Staging)} para maximizar la concordancia con expertos humanos (F1-Score).
+
+\begin{itemize}
+    \item \textbf{Modelos Discriminativos (CNNs):} Arquitecturas pioneras como \textbf{DeepSleepNet} \cite{supratak2017deepsleepnet} demostraron que las Redes Convolucionales podían extraer características invariantes directamente del EEG crudo, superando a los métodos de extracción manual.
+    
+    \item \textbf{Modelos de Secuencia a Secuencia (Seq2Seq):} Reconociendo la importancia del contexto temporal, modelos como \textbf{SeqSleepNet} \cite{phan2019seqsleepnet} y más recientemente \textbf{SleepTransformer} \cite{phan2022sleeptransformer}, han adaptado mecanismos de atención y Transformers para procesar secuencias completas (Many-to-Many).
+\end{itemize}
+
+Sin embargo, existe una brecha crítica en esta literatura: el objetivo de estos modelos es puramente \textit{discriminativo} (etiquetar correctamente). Aunque algunos estudios recientes analizan los ``ciclos de hipnodensidad'' (probabilidades de salida de la red) \cite{stephansen2018neural}, estos reflejan la incertidumbre del clasificador, no necesariamente la estructura semántica latente del proceso fisiológico.
+
+\subsection{La Brecha Actual: Manifold Learning en Sueño}
+Aunque técnicas de reducción de dimensionalidad como UMAP han comenzado a aparecer en estudios recientes (2023-2025) \cite{deng2024umap}, la inmensa mayoría las utiliza como paso intermedio para mejorar la separabilidad de clases (clustering) y el diagnóstico automático.
+
+Hasta la fecha, existe una ausencia notable de investigaciones que combinen \textbf{Embeddings Contextuales (Word2Vec)} con \textbf{Manifold Learning} para trazar la \textit{trayectoria dinámica} de la Fase 2. Esta tesis aborda este vacío, proponiendo que la geometría del espacio vectorial puede revelar estados de preparación anticipatoria (pre-SWS o pre-REM) invisibles para los clasificadores tradicionales y los modelos de hipnodensidad.
+
+\section{Fisiología del Sueño y Polisomnografía}
+
+El sueño es un proceso biológico activo, cíclico y altamente organizado, fundamental para la homeostasis del organismo. Lejos de ser una simple desconexión pasiva del entorno, el cerebro dormido exhibe patrones complejos de actividad eléctrica que regulan funciones críticas como la consolidación de la memoria, la restauración metabólica y la regulación emocional. Para el propósito de esta tesis, que busca modelar la dinámica de las transiciones de sueño mediante herramientas computacionales, es imperativo comprender primero la estructura biológica subyacente que estos modelos intentan capturar.
+
+El estándar de oro para el estudio científico del sueño es la Polisomnografía (PSG). Este registro simultáneo de múltiples variables fisiológicas permite visualizar la arquitectura del sueño en tiempo real. Siguiendo los lineamientos clásicos establecidos en el manual de \cite{rechtschaffen1968manual}, las señales mínimas requeridas para una estadificación confiable incluyen:
+\begin{itemize}
+    \item \textbf{Electroencefalograma (EEG):} Registra la actividad eléctrica cortical. Es la señal principal para diferenciar las fases basándose en la frecuencia y amplitud de las ondas cerebrales (ritmos alfa, theta, delta, husos de sueño).
+    \item \textbf{Electrooculograma (EOG):} Registra los movimientos oculares. Es crucial para identificar el inicio del sueño (movimientos oculares lentos en S1) y la fase REM (movimientos oculares rápidos).
+    \item \textbf{Electromiograma (EMG):} Registra el tono muscular (generalmente mentoniano). Es indispensable para distinguir el sueño REM (atonía muscular) de la vigilia o fases ligeras.
+\end{itemize}
+
+\section{Estadificación del Sueño: Criterios de Rechtschaffen y Kales}
+
+La clasificación de los estados de sueño se realiza tradicionalmente dividiendo el registro continuo en épocas (ventanas) de 30 segundos. A cada época se le asigna una etiqueta única basada en los patrones predominantes. A continuación, describimos las fases según los criterios de \cite{rechtschaffen1968manual}, enfatizando su relevancia para la dinámica de transiciones estudiada en este trabajo.
+
+\subsection{Vigilia (W)}
+
+El estado de vigilia con ojos cerrados se caracteriza por la presencia de un ritmo alfa dominante (8-13 Hz) en las regiones occipitales, acompañado de un tono muscular (EMG) elevado y movimientos oculares voluntarios o parpadeo. En el contexto de las transiciones, la vigilia representa el estado de ``retorno'' o fragmentación cuando aparece en mitad de la noche.
+
+\subsection{Sueño No REM (NREM)}
+
+El sueño NREM constituye aproximadamente el 75-80\% del sueño total en adultos y se subdivide en fases de profundidad progresiva. Desde la perspectiva de nuestros modelos vectoriales, el sueño NREM representa un continuo de actividad sincronizada.
+
+\subsubsection{Fase 1 (S1)}
+
+Es la etapa de transición entre la vigilia y el sueño. Se caracteriza por la desaparición del ritmo alfa y la aparición de ondas de bajo voltaje y frecuencia mixta (principalmente theta, 4-7 Hz). Fisiológicamente, es un estado inestable y breve (2-5\% de la noche). En nuestros análisis de grafos y matrices de transición, S1 actúa frecuentemente como un nodo de paso obligado desde la vigilia, pero raramente como un estado destino estable.
+
+\subsubsection{Fase 2 (S2)}
+
+Esta es la fase central de nuestra investigación. Representa entre el 45\% y el 55\% del tiempo total de sueño, convirtiéndola en el estado más abundante. Se define inequívocamente por la aparición de dos marcadores gráficos específicos sobre un fondo de actividad theta:
+\begin{itemize}
+    \item \textbf{Husos de Sueño (Sleep Spindles):} Ráfagas de actividad rítmica de 12-14 Hz que duran al menos 0.5 segundos. Se asocian con la inhibición del procesamiento sensorial (protección del sueño) y la consolidación de la memoria.
+    \item \textbf{Complejos K:} Ondas lentas bifásicas de gran amplitud (>75 $\mu$V) que pueden ocurrir espontáneamente o como respuesta a estímulos externos.
+\end{itemize}
+
+La Figura \ref{fig:eeg_s2} ilustra estos elementos característicos del EEG durante la Fase 2.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{Stage 2 sleep EEG K complex Sleep Spindle.png}
+    \caption{Elementos característicos del EEG en Fase 2. (A) Huso de Sueño: ráfaga de actividad sigma (12-14 Hz). (B) Complejo K: onda bifásica de gran amplitud.}
+    \label{fig:eeg_s2}
+\end{figure}
+
+Tradicionalmente, S2 se ha considerado una fase de ``transición'' o mantenimiento. Sin embargo, nuestra hipótesis de ``memoria latente'' sugiere que la S2 no es homogénea. Aunque visualmente idéntica según R\&K, proponemos que la micro-estructura de S2 varía funcionalmente dependiendo de si el cerebro se está ``preparando'' para profundizar hacia SWS o para activarse hacia REM.
+
+\paragraph*{Limitaciones del Estándar Visual.}
+Es crucial notar que el sistema R\&K es una discretización macroscópica (ventanas de 30s) que asume homogeneidad dentro de la etiqueta. Sin embargo, este estándar ignora la micro-estructura y la dinámica continua de la señal EEG. Al reducir 30 segundos de actividad eléctrica compleja a un solo número entero (el ``token''), se pierde información sobre la evolución interna del estado. Los modelos de embeddings vectoriales propuestos en este trabajo buscan recuperar esa ``información oculta'' latente en la secuencialidad, que el ojo humano y las reglas estrictas de R\&K no pueden capturar explícitamente.
+
+\subsubsection{Sueño de Ondas Lentas (SWS)}
+
+Corresponde al sueño profundo. \cite{rechtschaffen1968manual} distinguían entre S3 (20-50\% de ondas delta) y S4 (>50\% de ondas delta). En la práctica moderna y en este trabajo, ambas se unifican bajo la etiqueta SWS (Slow Wave Sleep). Se caracteriza por ondas delta de gran amplitud (>75 $\mu$V) y baja frecuencia (0.5-2 Hz). Es la fase de mayor umbral para el despertar y está fuertemente regulada por la presión homeostática: es predominante en el primer tercio de la noche y disminuye exponencialmente en los ciclos subsiguientes. Esta dinámica temporal es la que justifica nuestro enfoque de analizar el ``Primer Ciclo'' por separado para calibrar la escala temporal de los embeddings.
+
+\subsection{Sueño REM (Movimientos Oculares Rápidos)}
+
+El sueño REM es un estado paradójico: el EEG muestra una actividad desincronizada de bajo voltaje y frecuencia mixta, muy similar a la vigilia o la fase S1 (``dientes de sierra''), pero el cuerpo se encuentra en una parálisis muscular completa (atonía en el EMG). Se acompaña de ráfagas de movimientos oculares rápidos.
+
+El REM es el estado donde ocurren los sueños vívidos más narrativos. En la arquitectura del sueño, el REM y el SWS actúan como polos opuestos de un ciclo ultradiano. La transición de S2 a REM es, según nuestros resultados vectoriales, un ``salto'' semántico abrupto, a diferencia de la transición suave hacia SWS.
+
+\section{Analogía Lingüística y Semántica Distribucional del Sueño}
+
+Si bien el sueño es un proceso fisiológico, su representación mediante hipnogramas (secuencias discretas de símbolos) permite analizarlo bajo la óptica de la Teoría de la Información y la Lingüística Computacional. Al igual que el lenguaje natural, el sueño posee una \textbf{sintaxis} (reglas probabilísticas de transición, p.ej., S1 $\rightarrow$ S2 es gramaticalmente correcto, REM $\rightarrow$ SWS es agramatical o raro) y una \textbf{semántica} (el significado funcional de una fase depende de su contexto).
+
+Esta tesis se fundamenta en la \textbf{Hipótesis Distribucional}, la cual postula que elementos con contextos similares poseen significados similares. Para capturar esta semántica, utilizamos la arquitectura \textit{Skip-Gram} (ver Figura \ref{fig:skipgram}). A diferencia de los modelos clásicos, esta red neuronal toma la fase actual (por ejemplo, una época de S2) como entrada e intenta predecir las fases que la rodean (su contexto pasado y futuro). De esta forma, el vector resultante aprende a codificar no solo qué fase es, sino qué función cumple dentro de la secuencia.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{skipgram_sueno.png}
+    \caption{Arquitectura del modelo Skip-Gram aplicada al sueño. El nodo central representa la fase actual (Input) y la red optimiza los pesos para predecir las fases vecinas (Output), capturando así la dinámica de transición.}
+    \label{fig:skipgram}
+\end{figure}
+
+En nuestro marco, asumimos que una época de S2 que precede al sueño profundo (contexto de profundización) posee una ``carga semántica'' distinta a una época de S2 que precede al REM (contexto de activación), aunque ambas compartan la misma etiqueta en la clasificación macroscópica de R\&K.
+
+\section{Ciclos de Sueño y Dinámica Temporal}
+
+El sueño no ocurre en bloques aislados, sino que se organiza en ciclos ultradianos de aproximadamente 90 a 110 minutos, alternando entre sueño NREM y REM. Como se ilustra en la Figura \ref{fig:hipnograma}, la arquitectura del sueño no es uniforme: el sueño profundo (SWS) se concentra predominantemente en el primer tercio de la noche, mientras que la fase REM se vuelve más frecuente y prolongada en los ciclos tardíos.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{hipnograma_modelo.png}
+    \caption{Hipnograma de un participante sano representativo del conjunto de datos unificado. Nótese la predominancia de Sueño Profundo (SWS) en el primer tercio de la noche y el aumento progresivo del REM en los ciclos subsiguientes, ilustrando la no-estacionariedad del proceso.}
+    \label{fig:hipnograma}
+\end{figure}
+
+Desde una perspectiva estocástica, la arquitectura del sueño ha sido frecuentemente modelada como una Cadena de Markov. Sin embargo, una asunción crítica de los modelos markovianos simples es la \textbf{estacionariedad} (que las probabilidades de transición son constantes en el tiempo). La evidencia fisiológica (Modelo de Borbély) sugiere que el sueño es intrínsecamente \textbf{no-estacionario}: la probabilidad de pasar de S2 a SWS es alta al inicio de la noche (presión homeostática alta) y casi nula al final (presión disipada). Reconocer esta no-estacionariedad es fundamental para nuestra metodología, justificando el uso de ventanas deslizantes y análisis segmentado por ciclos en lugar de métricas globales que promediarían comportamientos dinámicos opuestos.
+
+\begin{itemize}
+    \item \textbf{Primer Ciclo:} Predomina el SWS y el REM es corto o inexistente. Aquí la presión homeostática es máxima, lo que genera estructuras de sueño más estables y consolidadas.
+    \item \textbf{Ciclos Tardíos:} A medida que la presión de sueño se disipa, el SWS desaparece y los periodos REM se alargan y fragmentan.
+\end{itemize}
+
+\section{Regulación del Sueño y Factores Experimentales}
+
+Para comprender la dinámica temporal descrita anteriormente y justificar la selección de nuestros datos, es necesario recurrir a dos conceptos teóricos fundamentales.
+
+\subsection{El Modelo de los Dos Procesos (Borbély)}
+
+Propuesto por \citet{borbely1982two}, este modelo postula que la regulación del sueño es el resultado de la interacción entre dos procesos:
+\begin{itemize}
+    \item \textbf{Proceso S (Homeostático):} Representa la ``presión de sueño'' que se acumula durante la vigilia y se disipa exponencialmente durante el sueño, específicamente durante el SWS.
+    \item \textbf{Proceso C (Circadiano):} Es un ritmo oscilatorio de aproximadamente 24 horas, independiente del sueño previo, que regula los umbrales de alerta y sueño.
+\end{itemize}
+
+La Figura \ref{fig:borbely} visualiza la interacción entre estos dos procesos.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Procesos.png}
+    \caption{Modelo de los Dos Procesos de Borbély (1982). El Proceso S (Homeostático) muestra su máxima presión al inicio de la noche, lo que justifica teóricamente la mayor estabilidad estructural observada en el primer ciclo.}
+    \label{fig:borbely}
+\end{figure}
+
+Este modelo proporciona el sustento teórico para nuestra decisión metodológica de analizar el \textbf{Primer Ciclo} por separado. Dado que el Proceso S es máximo al inicio de la noche, el primer ciclo presenta la estructura más robusta y menos fragmentada. Es en este periodo donde la duración de las fases (como S2) refleja su escala temporal ``natural'' antes de verse alterada por la disipación de la presión homeostática en ciclos posteriores.
+
+\subsection{El Efecto de Primera Noche (First Night Effect)}
+
+El ``Efecto de Primera Noche'' es un fenómeno bien documentado en la investigación del sueño, caracterizado por una alteración de la arquitectura del sueño (menor eficiencia, más despertares, latencias REM prolongadas) debido a la falta de adaptación del sujeto al entorno del laboratorio y a los sensores. Por esta razón, en esta investigación se descartaron sistemáticamente los registros de la primera noche, utilizando exclusivamente los datos de la \textbf{Noche 2}. Esto asegura que los patrones de transición y las estructuras vectoriales que analizamos correspondan a un sueño fisiológico basal y no a una respuesta de estrés adaptativo.
+
+\section{Fundamentos Algorítmicos}
+
+Para modelar la dinámica de las transiciones de sueño y extraer patrones ocultos en la secuencialidad de las fases, esta tesis emplea un enfoque híbrido que combina la teoría clásica de procesos estocásticos con técnicas modernas de aprendizaje de representaciones (Embeddings). A continuación, se detallan los fundamentos matemáticos de las Cadenas de Markov, herramienta base para nuestro análisis de estabilidad y transición.
+
+\subsection{Modelado Estocástico: Cadenas de Markov}
+
+Para entender cómo modelamos las transiciones entre fases, utilizamos el concepto de \textbf{Cadena de Markov}. Imaginemos el sueño no como una película continua, sino como una serie de fotografías tomadas cada 30 segundos (épocas). En cada foto, el cerebro está en un estado específico (por ejemplo, S2). La pregunta clave es: \textit{¿Qué probabilidad hay de que en la siguiente foto el cerebro cambie a REM o se quede en S2?}
+
+Una Cadena de Markov es un modelo que asume que \textbf{el futuro inmediato depende solo del presente}. Es decir, para predecir si el paciente entrará en sueño profundo en el siguiente minuto, solo necesitamos saber en qué fase está \textit{ahora}, sin importar todo lo que pasó horas antes. A esta característica se le llama ``propiedad de falta de memoria''.
+
+Matemáticamente, si $X_t$ es la fase del sueño en el tiempo actual $t$, la probabilidad de moverse a una fase futura $j$ dado que estamos en la fase $i$ se escribe como:
+
+\begin{equation}
+    P(X_{t+1} = j \mid X_t = i) = p_{ij}
+\end{equation}
+
+Todos estos posibles movimientos se organizan en una tabla llamada \textbf{Matriz de Transición} ($\mathbf{P}$). Es como un mapa de probabilidades que nos indica las rutas más frecuentes:
+
+\begin{equation}
+    \mathbf{P} = \begin{pmatrix}
+    p_{11} & p_{12} & \dots & p_{1k} \\
+    p_{21} & p_{22} & \dots & p_{2k} \\
+    \vdots & \vdots & \ddots & \vdots \\
+    p_{k1} & p_{k2} & \dots & p_{kk}
+    \end{pmatrix}
+\end{equation}
+
+Cada fila de esta matriz representa el estado actual (``Desde dónde salgo'') y cada columna el estado futuro (``A dónde voy''). La suma de cada fila siempre es 1, porque el sistema obligatoriamente debe transicionar a algún estado en $t+1$.
+
+Esta matriz admite una lectura como grafo dirigido: cada fase es un nodo y cada probabilidad de transición $p_{ij}$ una arista que lo conecta con el estado siguiente. Los valores de la diagonal ($p_{ii}$) corresponden a los bucles que un nodo dirige hacia sí mismo y reflejan la propiedad de inercia o permanencia en el estado.
+
+Además, la estructura de la matriz revela dos propiedades críticas para nuestra investigación:
+\begin{itemize}
+    \item \textbf{Centralidad de S2:} La Fase 2 actúa como un ``Hub'' o distribuidor central, conectando el inicio del sueño con las fases profundas (SWS) y el REM.
+    \item \textbf{Restricción Fisiológica:} La ausencia de una conexión directa SWS $\to$ REM confirma que el modelo respeta la sintaxis biológica del sueño sano.
+\end{itemize}
+
+\subsubsection{Estimación y Espacio de Estados}
+
+Para la aplicación en arquitectura del sueño, definimos el espacio de estados $\mathcal{S}$ con las cinco fases fisiológicas del sueño:
+
+\begin{equation}
+    \mathcal{S} = \{0: \text{W}, 1: \text{S1}, 2: \text{S2}, 3: \text{SWS}, 4: \text{REM}\}
+\end{equation}
+
+Donde \textbf{SWS} (Slow Wave Sleep) unifica las etapas S3 y S4. Las épocas sin clasificar (movimiento o etiquetas ausentes, código 5) se tratan como ruido y se excluyen del cálculo de las matrices de transición.
+
+Los parámetros de la matriz $\mathbf{P}$ se estiman a partir de los hipnogramas utilizando el \textbf{Estimador de Máxima Verosimilitud (MLE)}. Dado un conjunto de observaciones, la probabilidad estimada $\hat{p}_{ij}$ se calcula como la frecuencia relativa de las transiciones observadas:
+
+\begin{equation}
+    \hat{p}_{ij} = \frac{n_{ij}}{\sum_{k \in \mathcal{S}} n_{ik}}
+\end{equation}
+
+Donde $n_{ij}$ es el número total de veces que se observó una transición directa del estado $i$ al estado $j$.
+
+\subsubsection{Implicaciones Teóricas: Inercia y Distribución de Permanencia}
+
+Un componente crítico para nuestro análisis es la diagonal principal de la matriz ($p_{ii}$), que cuantifica la \textbf{inercia} o estabilidad del estado.
+
+Desde la teoría de procesos estocásticos, la probabilidad de permanecer en un estado $i$ durante exactamente $k$ épocas consecutivas en una cadena de Markov sigue obligatoriamente una \textbf{Distribución Geométrica}:
+
+\begin{equation}
+    P(\text{Duración} = k) = (p_{ii})^{k-1} (1 - p_{ii})
+\end{equation}
+
+\textbf{Limitación Crítica:} Este modelo asume implícitamente que la probabilidad de abandonar una fase es constante en cada paso temporal (falta de memoria). Sin embargo, la evidencia biológica sugiere que la duración de fases como la N2 sigue distribuciones de cola larga (\textbf{Leyes de Potencia}) y no geométricas. Esta discrepancia teórica justifica la necesidad de incorporar modelos que capturen dependencias de largo plazo, como los embeddings vectoriales (Word2Vec), superando la visión ``sin memoria'' de Markov.
+
+\subsubsection{No-Estacionariedad y Análisis por Ciclos}
+
+Finalmente, es necesario abordar la \textbf{Estacionariedad}. Una cadena de Markov estándar asume que la matriz $\mathbf{P}$ es constante a lo largo del tiempo (homogénea en el tiempo).
+No obstante, la regulación homeostática del sueño (Modelo de Borbély) implica que el proceso es \textbf{No-Estacionario}: la probabilidad de transitar a SWS ($p_{\text{S2} \to \text{SWS}}$) es alta al inicio de la noche y disminuye progresivamente.
+
+Para modelar esta dinámica sin violar los supuestos matemáticos, en esta tesis adoptamos un enfoque de \textbf{Cadenas de Markov por Tramos (Piecewise Markov Chains)}, calculando una matriz de transición independiente $\mathbf{P}^{(c)}$ para cada ciclo de sueño $c$. Esto permite cuantificar matemáticamente la degradación de la estabilidad del sueño a medida que avanza la noche.
+
+\subsection{Modelado Vectorial: Aprendizaje de Representaciones (Embeddings)}
+
+Si las Cadenas de Markov nos permiten cuantificar la estabilidad y las transiciones inmediatas, los modelos de aprendizaje de representaciones nos permiten capturar el \textit{contexto} y las dependencias de largo plazo. En esta tesis, adaptamos técnicas de Procesamiento de Lenguaje Natural (NLP), específicamente el algoritmo \textbf{Word2Vec}, para modelar la dinámica secuencial del sueño.
+
+\subsubsection{La Hipótesis Distribucional en el Sueño}
+
+La base teórica de este enfoque es la \textbf{Hipótesis Distribucional} de \cite{harris1954distributional}, popularizada por Firth: \textit{``Conocerás a una palabra por la compañía que frecuenta''}. En lingüística, esto significa que palabras con contextos similares (ej. ``perro'' y ``gato'' aparecen cerca de ``ladrar'' o ``maullar'') tienen significados semánticos similares.
+
+Transponiendo este concepto a la neurofisiología del sueño:
+\begin{quote}
+    \textit{La función de una fase de sueño no está definida solo por sus características espectrales intrínsecas (lo que ocurre en esos 30 segundos), sino por su posición en la secuencia temporal (de dónde viene y a dónde va).}
+\end{quote}
+
+Bajo esta premisa, una época de Fase 2 (S2) que precede al sueño profundo (SWS) es funcionalmente distinta de una época de S2 que precede al sueño REM, aunque para un experto humano se vean idénticas en el EEG. Nuestro objetivo es capturar esta diferencia latente mediante vectores matemáticos.
+
+\subsubsection{Algoritmo Word2Vec (Skip-Gram)}
+
+Utilizamos la arquitectura \textbf{Skip-Gram} de Word2Vec \cite{mikolov2013efficient, mikolov2013distributed}. A diferencia de otros modelos que usan el contexto para adivinar la palabra central (CBOW), Skip-Gram funciona al revés: toma una fase central y trata de predecir qué fases la rodean.
+
+Por ejemplo, imaginemos una secuencia de sueño:
+\[ \dots, \text{S1}, \text{S2}, \mathbf{S2}, \text{SWS}, \text{SWS}, \dots \]
+Si nuestra ventana de contexto es $c=2$ y la fase central es la segunda \textbf{S2} ($w_t$), el modelo intentará maximizar la probabilidad de predecir sus vecinos: $P(\text{S1} \mid \text{S2})$, $P(\text{S2} \mid \text{S2})$, $P(\text{SWS} \mid \text{S2})$.
+
+\paragraph*{Codificación y Definiciones}
+Para que la red neuronal procese estos símbolos, cada fase $w$ se representa inicialmente como un vector \textbf{One-Hot} $x \in \{0,1\}^W$ (un vector lleno de ceros con un único 1 en la posición de la fase activa). Este vector de entrada se proyecta a un espacio latente de menor dimensión.
+
+Formalmente, dado un hipnograma $w_1, w_2, \dots, w_T$, el objetivo es maximizar la probabilidad promedio:
+
+\begin{equation}
+    \frac{1}{T} \sum_{t=1}^{T} \sum_{-c \le j \le c, j \ne 0} \log P(w_{t+j} \mid w_t)
+\end{equation}
+
+Donde $v_w \in \mathbb{R}^D$ es la representación vectorial (embedding) de la fase, siendo $D$ la dimensión del espacio (un hiperparámetro elegido, ej. $D=32$). La probabilidad se calcula mediante la función Softmax sobre todo el vocabulario de tamaño $W$:
+
+\begin{equation}
+    P(w_O \mid w_I) = \frac{\exp({v'_{w_O}}^\top v_{w_I})}{\sum_{w=1}^{W} \exp({v'_w}^\top v_{w_I})}
+\end{equation}
+
+El resultado es un espacio vectorial donde la \textit{cercanía geométrica} (similitud coseno) refleja la \textit{similitud funcional}: si dos fases predicen los mismos vecinos, sus vectores serán similares.
+
+\begin{quote}
+    \textbf{Nota Técnica (Fases vs. N-gramas):} Aunque este ejemplo utiliza fases individuales como tokens para claridad expositiva, la misma lógica matemática aplica si los tokens son \textbf{N-gramas} (bloques de fases consecutivas). En esta tesis, utilizamos bloques de 6 épocas como tokens para capturar estructuras temporales de mayor escala, tal como se justifica a continuación.
+\end{quote}
+
+\subsubsection{Justificación Metodológica: De Leyes de Potencia a Vectores}
+
+La decisión de utilizar embeddings no fue arbitraria, sino que surgió de una limitación fundamental de los métodos estadísticos clásicos observada en nuestros datos:
+
+\begin{enumerate}
+    \item \textbf{Invarianza de Escala (Leyes de Potencia):} Al analizar la distribución de duración de la Fase 2, descubrimos que no sigue una distribución normal (Campana de Gauss), sino una \textbf{Ley de Potencia} (Power Law). Esto implica que no existe una ``duración típica'' de la Fase 2; el cerebro genera eventos de S2 que pueden durar desde 30 segundos hasta 20 minutos.
+    
+    \item \textbf{El Problema de la Ventana Fija:} Debido a esta invarianza de escala, cualquier análisis basado en ventanas de tiempo fijas y arbitrarias (ej. ``analizar bloques de 5 minutos'') es metodológicamente incorrecto, ya que corta procesos fisiológicos de distinta magnitud.
+    
+    \item \textbf{Solución Vectorial:} Word2Vec resuelve este problema porque no impone una duración rígida. Al aprender de contextos variables, el modelo puede capturar la ``intención'' de la fase (hacia dónde se dirige) independientemente de cuánto tiempo lleve el paciente en ella.
+\end{enumerate}
+
+Para fijar la resolución temporal del token (N-grama) no recurrimos a un único criterio, sino a la combinación de tres medidas sobre la cohorte completa: el ajuste a la ley de Zipf, la calidad de ese ajuste y la cobertura de los bloques continuos de Fase 2. El tamaño que mejor concilia los tres es $N=6$ (3 minutos), valor que se adopta como la escala de tokenización. La justificación cuantitativa detallada se presenta en el Capítulo \ref{resultados}.
+
+\subsection{Métrica de Similitud: Similitud Coseno}
+
+Una vez transformadas las fases del sueño en vectores dentro del espacio $\mathbb{R}^D$, surge la necesidad de cuantificar su proximidad funcional. En espacios vectoriales de alta dimensión, la distancia euclidiana tradicional presenta dos limitaciones críticas: la dispersión de los datos (maldición de la dimensionalidad) y el sesgo de frecuencia.
+
+Por ello, adoptamos la \textbf{Similitud Coseno} como métrica estándar. Esta medida evalúa el coseno del ángulo entre dos vectores, normalizando sus magnitudes. Esto es vital en el análisis del sueño, donde la Fase 2 es mucho más frecuente que el REM; la similitud coseno nos permite comparar la \textit{orientación semántica} de ambas fases sin que la diferencia en la cantidad de observaciones (longitud del vector) distorsione la métrica.
+
+\begin{equation}
+    \text{sim}(\mathbf{A}, \mathbf{B}) = \cos(\theta) = \frac{\mathbf{A} \cdot \mathbf{B}}{\|\mathbf{A}\| \|\mathbf{B}\|} = \frac{\sum_{i=1}^{D} A_i B_i}{\sqrt{\sum_{i=1}^{D} A_i^2} \sqrt{\sum_{i=1}^{D} B_i^2}}
+\end{equation}
+
+Para facilitar la interpretación geométrica, recordemos que el ángulo determina la relación funcional, independientemente del largo de los vectores.
+
+Donde $\mathbf{A}$ y $\mathbf{B}$ son los vectores de dos fases distintas. La interpretación en nuestro contexto es:
+\begin{itemize}
+    \item \textbf{Valor $\approx 1$ (Ángulo $0^\circ$):} Identidad funcional. Los vectores apuntan en la misma dirección (ej. estabilidad dentro de S2).
+    \item \textbf{Valor $\approx 0$ (Ángulo $90^\circ$):} Ortogonalidad. Las fases no tienen relación contextual directa o son independientes.
+    \item \textbf{Valor $< 0$ (Ángulo $>90^\circ$):} Oposición semántica. Indica roles funcionales antagónicos.
+\end{itemize}
+
+\subsubsection{Aplicación: Análisis de Trayectorias}
+
+Esta métrica constituye el núcleo de nuestra validación metodológica. En el Capítulo de Resultados, utilizamos la Distancia Coseno ($1 - \text{sim}$) para trazar la \textbf{trayectoria dinámica} de la Fase 2.
+
+Nuestra hipótesis de ``preparación'' se sustenta si observamos que el vector de una época de S2 comienza a rotar y acercarse angularmente al vector de destino (REM o SWS) \textit{antes} de que ocurra la transición clínica visible en el hipnograma. Esta rotación anticipada sería un indicio de un cambio de estado latente en la representación, antes que una observación directa sobre el cerebro.
+
+\subsection{Visualización y Reducción de Dimensionalidad: UMAP}
+
+Los embeddings generados por Word2Vec residen en un espacio de alta dimensión (en nuestro caso, $D=32$). Aunque este espacio es matemáticamente rico, es ininteligible para el ojo humano. Para validar cualitativamente si el modelo ha aprendido estructuras coherentes, es necesario proyectar estos vectores a un plano 2D.
+
+Descartamos métodos lineales clásicos como PCA (Análisis de Componentes Principales) porque, al intentar aplanar los datos, destruyen las relaciones no lineales complejas. En su lugar, utilizamos \textbf{UMAP (Uniform Manifold Approximation and Projection)} \cite{mcinnes2018umap}.
+
+\subsubsection{Fundamento Topológico: La Hipótesis del Manifold}
+
+La justificación matemática para usar UMAP radica en la \textbf{Hipótesis del Manifold}. Esta teoría postula que los datos de alta dimensión generados por procesos naturales (como la fisiología del sueño) no ocupan todo el espacio disponible, sino que yacen sobre una estructura topológica de menor dimensión curvada (una variedad o \textit{manifold}) incrustada en ese espacio.
+
+UMAP opera construyendo una representación de grafo difuso (fuzzy simplicial set) que aproxima esta variedad. A diferencia de t-SNE \cite{van2008visualizing}, que prioriza casi exclusivamente las relaciones locales, UMAP logra preservar mejor la \textbf{estructura global} de los datos mediante el ajuste de su hiperparámetro de vecindad (\texttt{n\_neighbors}).
+
+\paragraph*{Coherencia Métrica}
+Es importante destacar que, para mantener la consistencia teórica con nuestro modelo vectorial, configuramos UMAP para utilizar la \textbf{distancia coseno} en la construcción del grafo topológico inicial, en lugar de la distancia euclidiana por defecto. Esto asegura que la proyección 2D respete las mismas relaciones angulares que aprendió la red neuronal.
+
+Esta propiedad es crítica para nuestra tesis, ya que buscamos validar dos fenómenos simultáneos:
+\begin{enumerate}
+    \item \textbf{Agrupamiento Local (Clustering):} Que las épocas de una misma fase (ej. S2 estable) se mantengan compactas.
+    \item \textbf{Continuidad Global (Trayectorias):} Que exista un ``camino'' topológico continuo entre S2, SWS y REM.
+\end{enumerate}
+
+Si nuestra hipótesis de que \textit{el sueño es un proceso dinámico continuo} es correcta, UMAP debería revelar no nubes de puntos aisladas, sino una estructura conectada (posiblemente en forma de ``Y'' o bifurcación), donde la geometría del grafo refleje la fisiología de la transición.
+
+\paragraph*{Reproductibilidad y Estocasticidad}
+Finalmente, es importante notar que UMAP es un algoritmo estocástico (utiliza descensos de gradiente aleatorios). Para garantizar la \textbf{reproductibilidad científica} de nuestros resultados y asegurar que las estructuras topológicas observadas (como la forma de ``Y'') sean consistentes y no artefactos del azar, fijamos una semilla aleatoria (\textit{random seed}) constante en todas las ejecuciones del algoritmo.
+
+\subsection{Modelos de Lenguaje Recurrentes: Redes LSTM}
+
+Los embeddings Word2Vec capturan el significado funcional de un token a partir de su contexto inmediato, pero por sí solos no modelan la \textit{evolución} de la noche: cada token se representa de forma estática. Para evaluar si la secuencia completa contiene información \textbf{predictiva}, recurrimos a un modelo de lenguaje recurrente basado en redes \textbf{LSTM} (Long Short-Term Memory).
+
+\subsubsection{Del Embedding Estático a la Memoria Recurrente}
+
+Una Red Neuronal Recurrente (RNN) procesa una secuencia paso a paso, manteniendo un estado oculto $\mathbf{h}_t$ que resume la historia hasta el instante $t$. Sin embargo, las RNN simples sufren el problema del \textbf{desvanecimiento del gradiente}, que les impide retener dependencias de largo alcance, justamente las que caracterizan a los ciclos de sueño de noventa minutos. La arquitectura LSTM \cite{hochreiter1997long} resuelve esta limitación introduciendo un \textbf{estado de celda} $\mathbf{c}_t$ regulado por tres compuertas que deciden qué información olvidar, almacenar y emitir:
+
+\begin{align}
+    \mathbf{f}_t &= \sigma(\mathbf{W}_f [\mathbf{h}_{t-1}, \mathbf{e}_t] + \mathbf{b}_f) \quad \text{(olvido)} \\
+    \mathbf{i}_t &= \sigma(\mathbf{W}_i [\mathbf{h}_{t-1}, \mathbf{e}_t] + \mathbf{b}_i) \quad \text{(entrada)} \\
+    \tilde{\mathbf{c}}_t &= \tanh(\mathbf{W}_c [\mathbf{h}_{t-1}, \mathbf{e}_t] + \mathbf{b}_c) \\
+    \mathbf{c}_t &= \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t \\
+    \mathbf{o}_t &= \sigma(\mathbf{W}_o [\mathbf{h}_{t-1}, \mathbf{e}_t] + \mathbf{b}_o) \quad \text{(salida)} \\
+    \mathbf{h}_t &= \mathbf{o}_t \odot \tanh(\mathbf{c}_t)
+\end{align}
+
+donde $\sigma$ es la sigmoide y $\odot$ el producto elemento a elemento. La compuerta de olvido permite, por ejemplo, descartar que hubo vigilia veinte minutos atrás cuando el sueño ya se estabilizó, mientras la de entrada permite registrar la aparición de un patrón pre-REM. En esta tesis, la entrada $\mathbf{e}_t$ de cada paso es el embedding Word2Vec del 6-grama, que se mantiene \textbf{congelado}: así, lo que la LSTM aporta es exclusivamente la integración temporal, no un reaprendizaje de las representaciones.
+
+\subsubsection{El Sueño como Modelo de Lenguaje}
+
+Entrenar la LSTM para predecir la siguiente fase a partir de la historia equivale a un \textbf{modelo de lenguaje}: estima $P(w_t \mid w_{<t})$. La calidad de un modelo de lenguaje se mide por su \textbf{perplejidad}, esto es, la exponencial de la entropía cruzada (verosimilitud negativa promedio) sobre la secuencia. Una perplejidad baja indica que el modelo ``predice bien'' la dinámica observada.
+
+\subsubsection{El Cerebro Predictivo: la Anticipación}
+
+Este encuadre habilita una lectura \textbf{predictiva} alineada con la idea del cerebro como una máquina que minimiza su sorpresa \cite{friston2010free}: si la dinámica del sueño está estructurada, un modelo de lenguaje que la haya aprendido debería poder \textit{anticipar} sus transiciones ---asignando una probabilidad creciente al estado destino en los instantes previos a un cambio--- y no solo describirlas una vez ocurridas. Es esa capacidad anticipatoria, y no la mera exactitud agregada, la que se pone a prueba sobre datos reales en el capítulo de resultados.

@@ -1,0 +1,95 @@
+\chapter{Introducción}
+\chaptermark{Introducción}
+\label{intro}
+
+\section{Contexto General}
+
+El sueño es un proceso biológico activo y altamente organizado, fundamental para la homeostasis neurofisiológica. Lejos de ser un estado uniforme de inactividad, el cerebro dormido transita cíclicamente por distintas fases (Vigilia, Sueño Ligero S1 y S2, Sueño de Ondas Lentas SWS, y Sueño de Movimientos Oculares Rápidos REM), cada una con funciones específicas de restauración metabólica y consolidación de memoria.
+
+Históricamente, el estándar de oro para estudiar esta arquitectura ha sido la polisomnografía y la estadificación manual basada en las reglas de \cite{rechtschaffen1968manual}. Tradicionalmente, el análisis clínico y de investigación ha dependido de la \textbf{estadística descriptiva global}, resumiendo noches enteras de 8 horas en porcentajes totales (ej. ``20\% de REM'', ``50\% de S2''). Este enfoque asume implícitamente que la estructura del sueño es estática y que todas las épocas clasificadas bajo una misma etiqueta (como la Fase 2) son funcionalmente idénticas.
+
+\section{Planteamiento del Problema}
+
+El problema central que aborda esta tesis es la \textbf{insuficiencia de las métricas globales y estáticas} para capturar la dinámica secuencial del sueño.
+La Fase 2 (S2), que constituye aproximadamente el 50\% del tiempo total de sueño en adultos, ha sido considerada históricamente como una etapa de ``transición pasiva'' o un simple puente entre estados. Sin embargo, la evidencia biológica sugiere que el sueño es un proceso no-estacionario y dependiente del contexto.
+
+Para ilustrar esta limitación, la Figura \ref{fig:problema_conceptual} contrasta la visión clásica con la realidad dinámica del sueño.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.62\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{intro_estatico_donut.png}
+        \caption{Enfoque Estático: Porcentajes globales.}
+        \label{fig:estatico}
+    \end{subfigure}
+
+    \vspace{0.6em}
+
+    \begin{subfigure}[b]{0.92\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{intro_dinamico_hipno.png}
+        \caption{Enfoque Dinámico: Trayectoria secuencial.}
+        \label{fig:dinamico}
+    \end{subfigure}
+    \caption{El Paradigma Estático vs. Dinámico. (A) Las métricas globales (porcentajes) ocultan la estructura temporal. (B) El análisis secuencial revela la intencionalidad y trayectoria de las transiciones.}
+    \label{fig:problema_conceptual}
+\end{figure}
+
+Al reducir la complejidad del hipnograma a promedios globales, se pierde información crítica sobre la \textbf{intencionalidad} de las transiciones. Actualmente, no existen herramientas estandarizadas que permitan diferenciar si una época de S2 es un estado de ``profundización'' (preparándose para entrar a SWS) o un estado de ``activación'' (preparándose para REM). Esta ceguera metodológica impide comprender alteraciones sutiles en la arquitectura del sueño que no afectan los porcentajes totales, pero sí la continuidad y funcionalidad del ciclo.
+
+\section{Justificación de la Investigación}
+
+Esta investigación se justifica por la necesidad de incorporar herramientas modernas de \textbf{Inteligencia Artificial Interpretativa} al análisis de señales biomédicas. Mientras que el estado del arte en Deep Learning se ha enfocado en la clasificación automática (``cajas negras''), esta tesis propone un cambio de paradigma hacia el análisis de la dinámica.
+
+Nuestros análisis (ver Capítulo \ref{resultados}) revelaron que la duración de los bloques de Fase 2 no sigue una distribución normal, sino una \textbf{distribución de cola pesada}, en la que la media (12.10 épocas) y la mediana (5 épocas) divergen marcadamente. Esto implica que no existe una ``duración promedio'' representativa y que los métodos estadísticos tradicionales (basados en la media y desviación estándar) resultan inadecuados.
+La aplicación de técnicas de \textbf{Procesamiento de Lenguaje Natural (NLP)}, específicamente modelos de Embeddings, permite superar esta limitación. Al tratar las fases del sueño como ``palabras'' y los ciclos como ``oraciones'', podemos interrogar la estructura gramatical latente del hipnograma, abriendo la puerta a nuevos biomarcadores digitales basados en la trayectoria y no solo en la cantidad de sueño.
+
+Finalmente, la relevancia clínica de esta propuesta radica en su potencial como \textbf{biomarcador temprano}. Muchas patologías del sueño y neurodegenerativas alteran la micro-arquitectura del sueño antes de que los porcentajes globales (el hipnograma macroscópico) muestren cambios evidentes. Si nuestra hipótesis es correcta y la Fase 2 posee subtipos funcionales, la pérdida de esta diferenciación dinámica podría servir como una señal de alerta precoz de fragmentación del sueño, invisible para las métricas actuales.
+
+\section{Preguntas de Investigación e Hipótesis}
+
+\subsection*{Interrogantes de Investigación}
+
+\begin{enumerate}
+    \item ¿Existe información en la estructura secuencial de los hipnogramas que permita caracterizar la dinámica del sueño (S2, SWS, REM) en los distintos ciclos de sueño?
+    \item ¿Es diferente la dinámica de la Fase 2 cuando transita a SWS o REM, a partir de los vectores de incrustación (Embeddings) extraídos de los hipnogramas?
+    \item ¿Es posible anticipar su transición a otras fases (SWS o REM) a partir de los vectores de incrustación?
+\end{enumerate}
+
+\subsection*{Hipótesis}
+
+\begin{itemize}
+    \item \textbf{H1 (Estructural):} El sueño de un participante sano no es un proceso aleatorio; sigue una estructura particular no fragmentada.
+    \item \textbf{H2 (Lingüística):} Los hipnogramas son secuencias simbólicas que pueden ser tratadas mediante principios homólogos a los de un lenguaje natural.
+    \item \textbf{H3 (Dinámica):} La representación vectorial de la Fase 2 presenta una bifurcación topológica en el espacio latente que correlaciona con su destino (SWS vs. REM), permitiendo anticipar la transición antes de que ocurra clínicamente.
+\end{itemize}
+
+\section{Objetivos}
+
+\textbf{Objetivo General:}
+Modelar la dinámica de las transiciones de sueño mediante un enfoque híbrido de Cadenas de Markov y algoritmos de Embeddings (Word2Vec), para caracterizar la heterogeneidad funcional de la Fase 2.
+
+\textbf{Objetivos Específicos:}
+\begin{enumerate}
+    \item Cuantificar la estabilidad y las probabilidades de transición explícitas entre fases utilizando Matrices de Markov, diferenciando por ciclos de sueño para respetar la no-estacionariedad.
+    \item Entrenar un modelo de representación vectorial (Word2Vec Skip-Gram) sobre secuencias de hipnogramas para capturar las dependencias contextuales de largo plazo.
+    \item Implementar técnicas de reducción de dimensionalidad (UMAP) y métricas de similitud coseno para visualizar y medir la trayectoria dinámica de la Fase 2 en el espacio latente.
+    \item Validar si existe una ``bifurcación'' en la trayectoria de la Fase 2 que anticipe la entrada a estados de sueño profundo o REM.
+\end{enumerate}
+
+\section{Alcance y Delimitaciones}
+
+El núcleo metodológico de este estudio se construye sobre hipnogramas de adultos sanos, que definen una referencia normativa de la arquitectura del sueño a partir de la cual se modela su dinámica. Metodológicamente, la resolución temporal del análisis ($N=6$ épocas) se fija mediante un criterio multi-objetivo que combina el ajuste a la ley de Zipf, la calidad de dicho ajuste y la cobertura de los bloques de Fase 2, sin recurrir a la calibración por un ciclo particular.
+
+\FloatBarrier
+\section{Estructura de la Tesis}
+
+El presente trabajo se organiza en cinco capítulos:
+\begin{itemize}
+    \item \textbf{Capítulo 1: Introducción.} Presenta el contexto, la problemática y los objetivos del estudio.
+    \item \textbf{Capítulo 2: Marco Teórico.} Revisa la fisiología del sueño, las limitaciones de los modelos estocásticos clásicos y fundamenta el uso de algoritmos de NLP y Manifold Learning.
+    \item \textbf{Capítulo 3: Metodología.} Describe el procesamiento de datos, la configuración del modelo Word2Vec y los parámetros de visualización con UMAP.
+    \item \textbf{Capítulo 4: Resultados.} Expone los hallazgos sobre la estabilidad markoviana y presenta las proyecciones vectoriales que evidencian la dinámica de la Fase 2.
+    \item \textbf{Capítulo 5: Discusión y Conclusiones.} Interpreta los resultados a la luz de la fisiología del sueño, discute las implicaciones clínicas y propone líneas de trabajo futuro.
+\end{itemize}
