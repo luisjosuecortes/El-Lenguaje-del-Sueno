@@ -1,0 +1,3 @@
+# Los .html son exportaciones interactivas de Plotly (archivos generados):
+# se excluyen de la estadistica de lenguajes y se colapsan en los diffs de GitHub.
+*.html linguist-generated
