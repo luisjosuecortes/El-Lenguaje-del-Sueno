@@ -53,7 +53,7 @@ Finalmente, la relevancia clínica de esta propuesta radica en su potencial como
 
 \begin{enumerate}
     \item ¿Existe información en la estructura secuencial de los hipnogramas que permita caracterizar la dinámica del sueño (S2, SWS, REM) en los distintos ciclos de sueño?
-    \item ¿Es diferente la dinámica de la Fase 2 cuando transita a SWS o REM, a partir de los vectores de incrustación (Embeddings) extraídos de los hipnogramas?
+    \item ¿Pueden los hipnogramas tratarse como secuencias simbólicas que, al segmentarse en unidades de varias épocas, exhiben las regularidades estadísticas propias de un lenguaje natural?
     \item ¿Es posible anticipar su transición a otras fases (SWS o REM) a partir de los vectores de incrustación?
 \end{enumerate}
 
@@ -73,6 +73,7 @@ Modelar la dinámica de las transiciones de sueño mediante un enfoque híbrido 
 \textbf{Objetivos Específicos:}
 \begin{enumerate}
     \item Cuantificar la estabilidad y las probabilidades de transición explícitas entre fases utilizando Matrices de Markov, diferenciando por ciclos de sueño para respetar la no-estacionariedad.
+    \item Determinar la escala temporal de tokenización a la que las secuencias del hipnograma reproducen las regularidades estadísticas de un lenguaje natural, mediante un criterio multi-objetivo basado en la ley de Zipf.
     \item Entrenar un modelo de representación vectorial (Word2Vec Skip-Gram) sobre secuencias de hipnogramas para capturar las dependencias contextuales de largo plazo.
     \item Implementar técnicas de reducción de dimensionalidad (UMAP) y métricas de similitud coseno para visualizar y medir la trayectoria dinámica de la Fase 2 en el espacio latente.
     \item Validar si existe una ``bifurcación'' en la trayectoria de la Fase 2 que anticipe la entrada a estados de sueño profundo o REM.
