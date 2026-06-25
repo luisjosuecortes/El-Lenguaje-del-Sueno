@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LSTM — Modelo de lenguaje del sueño</title>
+<style>
+  :root{
+    --bg:#0e1726; --panel:#16223a; --ink:#eef3fc; --muted:#9fb0cc;
+    --accent:#4f9dff; --accent2:#39c0a3; --warn:#ffb454; --line:#2b3b5c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg); color:var(--ink);
+    font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; overflow:hidden}
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{position:absolute; inset:0; display:none; flex-direction:column;
+    justify-content:center; padding:4vh 6vw; opacity:0; transition:opacity .35s ease}
+  .slide.active{display:flex; opacity:1}
+  .kicker{color:var(--accent); font-weight:700; letter-spacing:.14em;
+    text-transform:uppercase; font-size:1.1vw; margin-bottom:1vh}
+  h1{font-size:4vw; line-height:1.08; margin-bottom:1.6vh}
+  h2{font-size:2.9vw; line-height:1.12; margin-bottom:2.4vh}
+  p,li{font-size:1.9vw; line-height:1.5}
+  .muted{color:var(--muted)}
+  .row{display:flex; gap:4vw; align-items:center}
+  .col{flex:1; min-width:0}
+  .imgwrap{background:#fff; border-radius:14px; padding:1vh 1vw;
+    box-shadow:0 12px 40px rgba(0,0,0,.45); text-align:center}
+  .imgwrap img{max-width:100%; max-height:64vh; border-radius:6px; display:block; margin:0 auto}
+  ul{margin-left:1.3em}
+  li{margin:1.4vh 0}
+  .take{color:var(--accent2); font-weight:800; font-size:2.1vw; margin-top:2vh}
+  .arch{font-size:1.7vw; background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; padding:2vh 2vw; margin-top:2vh; text-align:center}
+  .arch code{color:var(--accent); font-weight:700}
+  .arch .arrow{color:var(--muted); margin:0 .6vw}
+  table{border-collapse:collapse; width:100%; font-size:1.7vw; margin-top:1vh}
+  th,td{border:1px solid var(--line); padding:1.4vh 1.2vw; text-align:left}
+  th{background:var(--panel); color:var(--accent)}
+  td b{color:var(--accent2)}
+  .footer{position:absolute; bottom:2.4vh; left:6vw; right:6vw;
+    display:flex; justify-content:space-between; align-items:center;
+    color:var(--muted); font-size:1vw}
+  .progress{height:4px; background:var(--line); border-radius:99px; flex:1; margin:0 2vw}
+  .progress > i{display:block; height:100%; background:var(--accent); border-radius:99px; transition:width .35s}
+  .nav{position:absolute; bottom:1.6vh; right:1.6vw; display:flex; gap:.6vw}
+  .nav button{background:var(--panel); color:var(--ink); border:1px solid var(--line);
+    width:3vw; height:3vw; border-radius:8px; font-size:1.4vw; cursor:pointer}
+  .nav button:hover{border-color:var(--accent)}
+  .center{align-items:center; text-align:center}
+  .center h1{font-size:4.6vw}
+  .lead{font-size:2vw; color:var(--muted); margin-top:1.6vh}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- 0 PORTADA -->
+  <section class="slide center active">
+    <div class="kicker">Tesis del sueño</div>
+    <h1>La LSTM como modelo<br>de lenguaje del sueño</h1>
+    <p class="lead">¿Puede una red leer la noche y anticipar la fase siguiente?</p>
+  </section>
+
+  <!-- 1 QUÉ ES -->
+  <section class="slide">
+    <div class="row">
+      <div class="col">
+        <div class="kicker">Qué es</div>
+        <h2>Predecir la fase siguiente</h2>
+        <ul>
+          <li>Lee la noche <b>completa</b>, época tras época.</li>
+          <li>En cada paso predice la <b>próxima fase</b>.</li>
+          <li>Su memoria capta los ciclos de ~90 min.</li>
+        </ul>
+        <div class="arch">
+          <code>Word2Vec</code><span class="arrow">→</span><code>LSTM</code><span class="arrow">→</span><code>fase siguiente</code>
+        </div>
+      </div>
+      <div class="col">
+        <div class="imgwrap"><img src="imagenes/ilustrativas/lstm_desplegada.png" alt="LSTM desplegada"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 SOLO 2 LSTMs -->
+  <section class="slide">
+    <div class="kicker">Diseño</div>
+    <h2>Solo entrenamos 2 LSTMs</h2>
+    <table>
+      <tr><th>Modelo</th><th>Para qué</th></tr>
+      <tr><td><b>Real</b></td><td>El modelo de lenguaje del sueño: aprende el orden verdadero de la noche.</td></tr>
+      <tr><td><b>Barajada</b></td><td>Control: misma noche con el orden destruido. Sirve para comprobar que lo aprendido es temporal.</td></tr>
+    </table>
+    <p class="take">Una para aprender · otra para verificar.</p>
+  </section>
+
+  <!-- 3 ¿FUNCIONA? -->
+  <section class="slide">
+    <div class="row">
+      <div class="col">
+        <div class="kicker">¿Funciona?</div>
+        <h2>Acierta donde otros fallan</h2>
+        <table>
+          <tr><th>Modelo</th><th>Transiciones</th></tr>
+          <tr><td>LSTM</td><td><b>0.29</b></td></tr>
+          <tr><td>Markov-1</td><td>0.00</td></tr>
+          <tr><td>Persistencia</td><td>0.00</td></tr>
+        </table>
+        <p class="muted">Los demás solo repiten la fase anterior; fallan en cada cambio. La LSTM es la única que predice transiciones.</p>
+      </div>
+      <div class="col">
+        <div class="imgwrap"><img src="imagenes/lstm/lstm_vs_markov.png" alt="LSTM vs Markov"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 ANTICIPA -->
+  <section class="slide">
+    <div class="row">
+      <div class="col">
+        <div class="kicker">Hallazgo</div>
+        <h2>Anticipa el destino de S2</h2>
+        <ul>
+          <li>Antes de salir de S2, la red ya "sabe" si vendrá <b>SWS o REM</b>.</li>
+          <li>La probabilidad del destino real <b>sube</b> al acercarse al cambio.</li>
+        </ul>
+        <p class="take">Hay memoria latente sobre hacia dónde va la noche.</p>
+      </div>
+      <div class="col">
+        <div class="imgwrap"><img src="imagenes/lstm/bifurcacion_real.png" alt="Bifurcación real"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 ES REAL -->
+  <section class="slide">
+    <div class="row">
+      <div class="col">
+        <div class="kicker">Control</div>
+        <h2>¿Y si fuera casualidad?</h2>
+        <ul>
+          <li>Con la noche <b>barajada</b>, la anticipación <b>desaparece</b>.</li>
+          <li>El acierto cae de <b>0.74 → 0.26</b>.</li>
+        </ul>
+        <p class="take">La estructura es temporal real, no azar.</p>
+      </div>
+      <div class="col">
+        <div class="imgwrap"><img src="imagenes/lstm/bifurcacion_real_vs_shuf.png" alt="Real vs Barajada"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 CIERRE -->
+  <section class="slide center">
+    <div class="kicker">Conclusión</div>
+    <h1>La LSTM lee la noche<br>como un idioma</h1>
+    <p class="lead">Predice transiciones · anticipa el destino de S2 · y el control demuestra que es real.</p>
+  </section>
+
+</div>
+
+<div class="footer">
+  <span>LSTM — Tesis del sueño</span>
+  <span class="progress"><i id="bar"></i></span>
+  <span id="counter">1 / 7</span>
+</div>
+<div class="nav">
+  <button onclick="go(-1)">‹</button>
+  <button onclick="go(1)">›</button>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  let i = 0;
+  function render(){
+    slides.forEach((s,k)=>s.classList.toggle('active', k===i));
+    document.getElementById('counter').textContent = (i+1)+' / '+slides.length;
+    document.getElementById('bar').style.width = ((i+1)/slides.length*100)+'%';
+  }
+  function go(d){ i = Math.max(0, Math.min(slides.length-1, i+d)); render(); }
+  document.addEventListener('keydown', e=>{
+    if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){ go(1); e.preventDefault(); }
+    if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){ go(-1); e.preventDefault(); }
+    if(e.key==='Home'){ i=0; render(); }
+    if(e.key==='End'){ i=slides.length-1; render(); }
+  });
+  render();
+</script>
+</body>
+</html>

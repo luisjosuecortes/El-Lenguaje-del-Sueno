@@ -1,0 +1,5 @@
+,n_pacientes,n_epocas,horas_total,horas_media,horas_min,horas_max,edad_media,edad_min,edad_max,n_mujeres,n_hombres
+CAP,16,15947,132.88,8.3,7.1,9.5,32.19,23.0,42.0,9,7
+EDF,82,70410,586.78,7.16,3.68,13.66,41.88,25.0,60.0,46,36
+SCO,29,26452,220.44,7.6,6.32,10.16,,,,0,0
+TOTAL,127,112809,940.1,7.4,3.68,13.66,40.3,23.0,60.0,55,43

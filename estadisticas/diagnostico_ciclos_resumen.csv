@@ -1,0 +1,4 @@
+dataset,pacientes,sin_ciclos,media_ciclos,mediana_ciclos,min_ciclos,max_ciclos,dur_ciclo_min
+CAP,16,0,5.44,5.5,4,6,92.74
+EDF,82,0,4.43,4.0,2,8,100.68
+SCO,29,0,5.07,5.0,3,7,92.19

@@ -1,0 +1,40 @@
+# --- Artefactos de compilación de LaTeX (se regeneran con pdflatex/bibtex) ---
+latex/*.aux
+latex/*.log
+latex/*.out
+latex/*.toc
+latex/*.lof
+latex/*.lot
+latex/*.bbl
+latex/*.blg
+latex/*.synctex.gz
+latex/*.fls
+latex/*.fdb_latexmk
+latex/*.run.xml
+latex/*.bcf
+**/*.aux
+# El PDF final vive en la raíz (./tesis.pdf); no versionamos la copia de build.
+latex/*.pdf
+
+# --- Python / Jupyter ---
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.virtual_documents/
+
+# --- Entornos y editores ---
+.venv/
+venv/
+env/
+.vscode/
+.idea/
+
+# --- Sistema ---
+.DS_Store
+Thumbs.db
+
+# --- Datos crudos ---
+# Se incluyen solo los hipnogramas ya extraídos (CSV/Excel) que usa el notebook 1.
+# La señal cruda pesada nunca se versiona (evita subir gigabytes por accidente).
+*.edf
+*.EDF

@@ -1,0 +1,22 @@
+# Entorno para reproducir los notebooks (probado con Python 3.10).
+# Recomendado: conda create -n sueno python=3.10 && conda activate sueno && pip install -r requirements.txt
+#
+# torch: la versión usada fue 2.4.0 con CUDA 12.4 (GPU). Para CPU basta `pip install torch==2.4.0`.
+# Para GPU, instala desde el índice oficial: https://pytorch.org/get-started/locally/
+torch==2.4.0
+
+numpy==2.1.3
+pandas==2.2.3
+scipy==1.15.2
+scikit-learn==1.7.2
+
+matplotlib==3.10.0
+plotly==6.4.0
+kaleido==1.2.0          # exportar figuras de plotly a PNG estático
+umap-learn==0.5.9.post2
+
+openpyxl==3.1.5         # leer metadata .xlsx (CAP) en el notebook 1
+xlrd==2.0.1             # leer metadata .xls  (Sleep-EDF) en el notebook 1
+
+nbconvert==7.17.1
+jupyter

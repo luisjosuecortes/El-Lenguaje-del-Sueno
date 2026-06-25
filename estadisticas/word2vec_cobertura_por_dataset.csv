@@ -1,0 +1,4 @@
+dataset,pacientes,tokens_totales,tokens_unicos,unicos_en_vocab_global,cobertura_vocab_global_%
+CAP,16,15867,368,341,99.83
+EDF,82,70000,1476,1035,99.37
+SCO,29,26307,2073,1227,96.78

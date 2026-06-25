@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "Si usas este trabajo o su código, por favor cítalo como se indica."
+title: "El Lenguaje del Sueño: La Fase 2 como Hub Dinámico del Sueño Sano"
+abstract: >-
+  Modelado de la dinámica de las transiciones del sueño combinando Cadenas de
+  Markov con técnicas de Procesamiento de Lenguaje Natural (Word2Vec y una red
+  recurrente LSTM) sobre una cohorte unificada de 127 sujetos sanos.
+authors:
+  - family-names: "Cortés"
+    given-names: "Luis Josué"
+    email: "luisjosuecortes@gmail.com"
+date-released: "2026-06-24"
+license: MIT
+# url: "https://github.com/<usuario>/el-lenguaje-del-sueno"   # completar al publicar
+keywords:
+  - "arquitectura del sueño"
+  - "Fase 2"
+  - "cadenas de Markov"
+  - "Word2Vec"
+  - "LSTM"
+  - "ley de Zipf"
+  - "procesamiento de lenguaje natural"
+preferred-citation:
+  type: thesis
+  title: "El Lenguaje del Sueño: La Fase 2 como Hub Dinámico del Sueño Sano"
+  authors:
+    - family-names: "Cortés"
+      given-names: "Luis Josué"
+  year: 2026
+  thesis-type: "Tesis de Licenciatura"
