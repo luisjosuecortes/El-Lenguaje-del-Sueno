@@ -45,13 +45,24 @@
 \vspace{10pt}
 \noindent \textbf{Palabras clave:} arquitectura del sueño, Fase 2, cadenas de Markov, Word2Vec, \textit{embeddings}, LSTM, ley de Zipf, biomarcadores digitales.
 
-\vspace{24pt}
-\begin{center}{\Large\bfseries Abstract}\end{center}
-\vspace{6pt}
+\newpage
+\thispagestyle{empty}
+\begin{center}
+{\Large\bfseries\MakeUppercase{Abstract}}
+\vskip 20pt
+{\bfseries\eltitulo}
+\vskip 9pt
+\elnombre
+\end{center}
+\vskip 20pt
 \noindent This thesis models the dynamics of sleep-stage transitions by combining Markov chains with Natural Language Processing techniques (Word2Vec and a recurrent LSTM network). On a unified cohort of \textbf{127 healthy subjects} (112,809 epochs from three polysomnographic databases), the hypnogram is treated as a symbolic sequence in which sleep stages are ``words'' and cycles are ``sentences''. The Markov analysis supports that healthy sleep has a non-random structure: high state inertia, absence of the SWS$\rightarrow$REM shortcut, and an orderly degradation of stability over the night. A multi-objective criterion ---balancing closeness to Zipf's law, goodness of fit, and coverage of Stage~2 blocks--- sets the tokenization scale at $N=6$ epochs (3 minutes), where the n-gram distribution is compatible with that of a natural language. At this scale, Word2Vec embeddings organize the phase space coherently with physiology. Finally, an LSTM assigns increasing probability to the destination state in the minutes preceding a real transition ---a signal that vanishes when the sequence is permuted---; a permutation test supports this anticipation toward REM, whereas toward slow-wave sleep it is only marginal. Taken together, the results are consistent with Stage~2 acting as a dynamic hub whose exit is not indifferent to its destination, a reading offered as a hypothesis to be tested rather than a settled fact.
 
 \vspace{10pt}
 \noindent \textbf{Keywords:} sleep architecture, Stage~2, Markov chains, Word2Vec, embeddings, LSTM, Zipf's law, digital biomarkers.
+
+\vspace{18pt}
+\noindent\rule{0.35\linewidth}{0.4pt}\\[2pt]
+{\footnotesize Código, notebooks y datos del proyecto disponibles en: \url{https://github.com/luisjosuecortes/El-Lenguaje-del-Sueno}}
 }
 
 \frontmatter

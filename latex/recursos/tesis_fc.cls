@@ -125,16 +125,18 @@
 	\vskip .7cm
     PRESENTA:\\[3pt]
 	\vskip .1cm
-    {\textbf{\elnombre}}
+    {\textbf{\MakeUppercase{\elnombre}}}
 
     \vspace{1.0cm}
 
-    {\normalsize DIRECTOR DE TESIS\\ DR. \eldirector}
-
-    \ifx\elcodirector\empty\else
-    \vspace{0.6cm}
-
-    {\normalsize CO-DIRECTOR DE TESIS\\ DR. \elcodirector}
+    \ifx\elcodirector\empty
+      {\normalsize DIRECTOR DE TESIS\\ DR. \eldirector}
+    \else
+      {\normalsize
+      \begin{tabular}{c@{\hspace{1.2cm}}c}
+        DIRECTOR DE TESIS & CO-DIRECTOR DE TESIS \\
+        DR. \eldirector & DR. \elcodirector \\
+      \end{tabular}}
     \fi
 
     \vspace{3.0cm}
